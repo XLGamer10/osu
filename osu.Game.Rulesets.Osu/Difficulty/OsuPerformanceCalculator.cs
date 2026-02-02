@@ -332,8 +332,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             flashlightValue *= getComboScalingFactor(attributes);
 
-            // Scale the flashlight value with accuracy _slightly_.
-            flashlightValue *= 0.5 + accuracy / 2.0;
+            // Scale the flashlight value with adjusted deviation
+            double adjustedDeviation = deviation.Value * calculateDeviationArAdjust(approachRate);
+            flashlightValue *= DifficultyCalculationUtils.Erf(53 / (Math.Sqrt(2) * adjustedDeviation));
+            flashlightValue *= 0.98 + Math.Pow(100.0 / 9, 2) / 2500;  // OD 11 SS stays the same.
 
             return flashlightValue;
         }
