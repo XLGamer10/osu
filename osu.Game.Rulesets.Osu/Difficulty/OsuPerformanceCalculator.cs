@@ -243,6 +243,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 double relevantMissCount = Math.Min(effectiveMissCount + speedEstimatedSliderBreaks, totalImperfectHits + countSliderTickMiss);
 
                 speedValue *= calculateMissPenalty(relevantMissCount, attributes.SpeedDifficultStrainCount);
+
+                // This is additional miss penalty to compensate for deviation not accounting for misses unlike accuracy
+                speedValue *= Math.Pow((double)totalSuccessfulHits / totalHits, 2);
             }
 
             // TC bonuses are excluded when blinds is present as the increased visual difficulty is unimportant when notes cannot be seen.
@@ -264,7 +267,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double effectiveHitWindow = 20 * Math.Pow(4 / attributes.SpeedDifficulty, 0.35);
 
             // Find the proportion of 300s on speed notes assuming the hit window was the effective hit window.
-            double effectiveAccuracy = DifficultyCalculationUtils.Erf(effectiveHitWindow / (double)speedDeviation);
+            double arAdjust = calculateDeviationArAdjust(approachRate);
+            double adjustedSpeedDeviation = speedDeviation.Value * Math.Max(Math.Pow(arAdjust, 0.7), arAdjust);
+            double effectiveAccuracy = DifficultyCalculationUtils.Erf(effectiveHitWindow / adjustedSpeedDeviation);
 
             // Scale speed value by normalized accuracy.
             speedValue *= Math.Pow(effectiveAccuracy, 2);
