@@ -203,7 +203,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double aimValue = OsuStrainSkill.DifficultyToPerformance(aimDifficulty);
 
-            double lengthBonus = 0.95 + 0.3 * Math.Min(1.0, totalHits / 2000.0) +
+            double lengthBonus = 0.95 + 0.35 * Math.Min(1.0, totalHits / 2000.0) +
                                  (totalHits > 2000 ? Math.Log10(totalHits / 2000.0) * 0.5 : 0.0);
             aimValue *= lengthBonus;
 
@@ -305,12 +305,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 }
             }
 
-            const double acc_pp_multiplier = 2.9;
+            const double acc_pp_multiplier = 3.4;
 
             const double max_objects_length_bonus = 1420;
             double lengthBonusObjects = Math.Min(amountHitObjectsWithAccuracy, max_objects_length_bonus);
 
-            double liveLengthBonus = Math.Pow(lengthBonusObjects / 1000.0, 0.4);
+            double liveLengthBonus = Math.Pow(lengthBonusObjects / 1000.0, 0.6);
             double threshold = 1000 * Math.Pow(1.15, 1 / 0.4); // Number of objects until length bonus caps.
 
             // Some fancy stuff to make curve similar to live
