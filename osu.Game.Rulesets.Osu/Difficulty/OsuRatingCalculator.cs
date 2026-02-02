@@ -40,12 +40,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 aimRating *= 1.0 - magnetisedStrength;
             }
 
-            double ratingMultiplier = 1.0;
-
-            // It is important to consider accuracy difficulty when scaling with accuracy.
-            ratingMultiplier *= 0.98 + Math.Pow(Math.Max(0, overallDifficulty), 2) / 2500;
-
-            return aimRating * Math.Cbrt(ratingMultiplier);
+            return aimRating;
         }
 
         public double ComputeSpeedRating(double speedDifficultyValue)

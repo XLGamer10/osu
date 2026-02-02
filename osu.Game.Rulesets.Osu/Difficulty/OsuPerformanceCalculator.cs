@@ -214,6 +214,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 double relevantMissCount = Math.Min(effectiveMissCount + aimEstimatedSliderBreaks, totalImperfectHits + countSliderTickMiss);
 
                 aimValue *= calculateMissPenalty(relevantMissCount, attributes.AimDifficultStrainCount);
+
+                // This is additional miss penalty to compensate for deviation not accounting for misses unlike accuracy
+                aimValue *= (double)totalSuccessfulHits / totalHits;
             }
 
             // TC bonuses are excluded when blinds is present as the increased visual difficulty is unimportant when notes cannot be seen.
@@ -224,7 +227,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 aimValue *= 1.0 + calculateTraceableBonus(attributes.SliderFactor);
             }
 
-            aimValue *= accuracy;
+            // Scale the aim value with adjusted deviation
+            double adjustedDeviation = deviation.Value * calculateDeviationArAdjust(approachRate);
+            adjustedDeviation *= 1 + 0.12 * Math.Pow(attributes.AimDifficulty, 0.7);
+
+            aimValue *= DifficultyCalculationUtils.Erf(28 / (Math.Sqrt(2) * adjustedDeviation));
+            aimValue *= 0.98 + Math.Pow(100.0 / 9, 2) / 2500; // OD 11 SS stays the same.
 
             return aimValue;
         }
