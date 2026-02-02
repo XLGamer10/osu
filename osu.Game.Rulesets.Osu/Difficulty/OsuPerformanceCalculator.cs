@@ -289,26 +289,38 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 return 0.0;
 
             // This percentage only considers HitCircles of any value - in this part of the calculation we focus on hitting the timing hit window.
-            double betterAccuracyPercentage;
-            int amountHitObjectsWithAccuracy = attributes.HitCircleCount;
+            double amountHitObjectsWithAccuracy = attributes.HitCircleCount;
             if (!usingClassicSliderAccuracy || usingScoreV2)
                 amountHitObjectsWithAccuracy += attributes.SliderCount;
-
-            if (amountHitObjectsWithAccuracy > 0)
-                betterAccuracyPercentage = ((countGreat - Math.Max(totalHits - amountHitObjectsWithAccuracy, 0)) * 6 + countOk * 2 + countMeh) / (double)(amountHitObjectsWithAccuracy * 6);
             else
-                betterAccuracyPercentage = 0;
+            {
+                // Start with amount of hit circles
+                amountHitObjectsWithAccuracy = attributes.HitCircleCount;
 
-            // It is possible to reach a negative accuracy with this formula. Cap it at zero - zero points.
-            if (betterAccuracyPercentage < 0)
-                betterAccuracyPercentage = 0;
+                // If amount of circles is too small - also add sliders, because UR is calculated according to sliders too
+                double circlesRatio = (double)attributes.HitCircleCount / (attributes.HitCircleCount + attributes.SliderCount);
+                if (circlesRatio < 0.25)
+                {
+                    amountHitObjectsWithAccuracy += attributes.SliderCount * (1 - circlesRatio / 0.25);
+                }
+            }
 
-            // Lots of arbitrary values from testing.
-            // Considering to use derivation from perfect accuracy in a probabilistic manner - assume normal distribution.
-            double accuracyValue = Math.Pow(1.52163, overallDifficulty) * Math.Pow(betterAccuracyPercentage, 24) * 2.83;
+            const double acc_pp_multiplier = 2.9;
+            const double acc_length_bonus_multiplier = 1.0;
 
-            // Bonus for many hitcircles - it's harder to keep good accuracy up for longer.
-            accuracyValue *= Math.Min(1.15, Math.Pow(amountHitObjectsWithAccuracy / 1000.0, 0.3));
+            double liveLengthBonus = acc_length_bonus_multiplier * Math.Min(1.15, Math.Pow(amountHitObjectsWithAccuracy / 1000.0, 0.4));
+            double threshold = 1000 * Math.Pow(1.15, 1 / 0.4); // Number of objects until length bonus caps.
+
+            // Some fancy stuff to make curve similar to live
+            double scaling = Math.Sqrt(2) * Math.Log(1.52163) * DifficultyCalculationUtils.ErfInv(1 / (1 + 1 / Math.Min(amountHitObjectsWithAccuracy, threshold))) / 6;
+
+            // Accuracy pp formula that's roughly the same as live.
+            double accuracyValue = acc_pp_multiplier * Math.Pow(1.52163, 40.0 / 3) * liveLengthBonus * Math.Exp(-scaling * deviation.Value);
+
+            // Punish very low amount of hits additionally to prevent big pp values right at the start of the map
+            double amountOfHits = Math.Clamp(totalSuccessfulHits - attributes.SpinnerCount, 0, amountHitObjectsWithAccuracy);
+            if (amountOfHits < 30)
+                accuracyValue *= Math.Sqrt(amountOfHits / 30);
 
             // Increasing the accuracy value by object count for Blinds isn't ideal, so the minimum buff is given.
             if (score.Mods.Any(m => m is OsuModBlinds))
