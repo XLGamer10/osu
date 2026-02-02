@@ -360,6 +360,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private double computeReadingValue(OsuDifficultyAttributes attributes)
         {
+            if (deviation == null)
+                return 0.0;
+
             double readingValue = HarmonicSkill.DifficultyToPerformance(attributes.ReadingDifficulty);
 
             if (effectiveMissCount > 0)
@@ -367,6 +370,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             // Scale the reading value with accuracy _harshly_.
             readingValue *= Math.Pow(accuracy, 3);
+
+            double adjustedDeviation = deviation.Value * calculateDeviationArAdjust(approachRate);
+            readingValue *= DifficultyCalculationUtils.Erf(30 / (Math.Sqrt(2) * adjustedDeviation));
 
             return readingValue;
         }
@@ -594,13 +600,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return traceableBonus;
         }
 
+        // https://www.desmos.com/calculator/gzaglr8u4s
+        private static double calculateDeviationArAdjust(double AR) => 0.69 + 0.33 / (1.0 + Math.Pow(2.07, 9.32 - AR));
+
         // Miss penalty assumes that a player will miss on the hardest parts of a map,
         // so we use the amount of relatively difficult sections to adjust miss penalty
         // to make it more punishing on maps with lower amount of hard sections.
         private double calculateMissPenalty(double missCount, double difficultStrainCount) => 0.96 / ((missCount / (4 * Math.Pow(Math.Log(difficultStrainCount), 0.94))) + 1);
-
-        // https://www.desmos.com/calculator/gzaglr8u4s
-        private static double calculateDeviationArAdjust(double AR) => 0.35 + 0.78 / (1.0 + Math.Pow(2.3, 8.7 - AR));
         private double getComboScalingFactor(OsuDifficultyAttributes attributes) => attributes.MaxCombo <= 0 ? 1.0 : Math.Min(Math.Pow(scoreMaxCombo, 0.8) / Math.Pow(attributes.MaxCombo, 0.8), 1.0);
 
         private int totalHits => countGreat + countOk + countMeh + countMiss;

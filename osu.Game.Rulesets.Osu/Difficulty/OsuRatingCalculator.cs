@@ -81,11 +81,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 readingRating *= 1.0 - magnetisedStrength;
             }
 
-            double ratingMultiplier = 1.0;
-
-            ratingMultiplier *= 0.75 + Math.Pow(Math.Max(0, overallDifficulty), 2.2) / 800;
-
-            return readingRating * Math.Cbrt(ratingMultiplier);
+            return readingRating;
         }
 
         public double ComputeFlashlightRating(double flashlightDifficultyValue)
