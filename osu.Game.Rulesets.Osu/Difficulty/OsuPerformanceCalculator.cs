@@ -306,9 +306,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             }
 
             const double acc_pp_multiplier = 2.9;
-            const double acc_length_bonus_multiplier = 1.0;
 
-            double liveLengthBonus = acc_length_bonus_multiplier * Math.Min(1.15, Math.Pow(amountHitObjectsWithAccuracy / 1000.0, 0.4));
+            const double max_objects_length_bonus = 1420;
+            double lengthBonusObjects = Math.Min(amountHitObjectsWithAccuracy, max_objects_length_bonus);
+
+            double liveLengthBonus = Math.Pow(lengthBonusObjects / 1000.0, 0.4);
             double threshold = 1000 * Math.Pow(1.15, 1 / 0.4); // Number of objects until length bonus caps.
 
             // Some fancy stuff to make curve similar to live
