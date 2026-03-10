@@ -62,6 +62,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private double aimEstimatedSliderBreaks;
         private double speedEstimatedSliderBreaks;
 
+        public static double DifficultyToPerformance(double difficulty) => 4.0 * Math.Pow(difficulty, 3.0);
+
         public OsuPerformanceCalculator()
             : base(new OsuRuleset())
         {
@@ -197,7 +199,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 aimDifficulty *= sliderNerfFactor;
             }
 
-            double aimValue = OsuStrainSkill.DifficultyToPerformance(aimDifficulty);
+            double aimValue = DifficultyToPerformance(aimDifficulty);
 
             if (effectiveMissCount > 0)
             {
@@ -494,7 +496,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (speedDeviation == null)
                 return 0;
 
-            double speedValue = OsuStrainSkill.DifficultyToPerformance(attributes.SpeedDifficulty);
+            double speedValue = HarmonicSkill.DifficultyToPerformance(attributes.SpeedDifficulty);
 
             // Decides a point where the PP value achieved compared to the speed deviation is assumed to be tapped improperly. Any PP above this point is considered "excess" speed difficulty.
             // This is used to cause PP above the cutoff to scale logarithmically towards the original speed value thus nerfing the value.
