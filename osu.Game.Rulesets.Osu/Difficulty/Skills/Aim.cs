@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
+using osu.Game.Rulesets.Difficulty.Skills;
 using osu.Game.Rulesets.Difficulty.Utils;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Difficulty.Evaluators;
@@ -18,7 +19,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// <summary>
     /// Represents the skill required to correctly aim at every object in the map with a uniform CircleSize and normalized distances.
     /// </summary>
-    public class Aim : OsuStrainSkill
+    public class Aim : TimeSkill
     {
         public readonly bool IncludeSliders;
 
@@ -38,10 +39,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private readonly List<double> sliderStrains = new List<double>();
 
-        private double strainDecay(double ms) => Math.Pow(0.15, ms / 1000);
+        protected override double HitProbability(double skill, double difficulty)
+        {
+            if (difficulty <= 0) return 1;
+            if (skill <= 0) return 0;
 
-        protected override double CalculateInitialStrain(double time, DifficultyHitObject current) =>
-            currentStrain * strainDecay(time - current.Previous(0).StartTime);
+            return DifficultyCalculationUtils.Erf(skill / (Math.Sqrt(2) * difficulty));
+        }
+
+        private double strainDecay(double ms) => Math.Pow(0.15, ms / 1000);
 
         protected override double StrainValueAt(DifficultyHitObject current)
         {
