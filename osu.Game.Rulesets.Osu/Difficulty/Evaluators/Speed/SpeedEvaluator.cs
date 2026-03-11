@@ -6,7 +6,6 @@ using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Utils;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Objects;
-using osu.Game.Rulesets.Scoring;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 {
@@ -31,10 +30,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 
             double strainTime = osuCurrObj.AdjustedDeltaTime;
             double doubletapness = 1.0 - osuCurrObj.GetDoubletapness((OsuDifficultyHitObject?)osuCurrObj.Next(0));
-
-            // Cap deltatime to the OD 300 hitwindow.
-            // 0.93 is derived from making sure 260bpm OD8 streams aren't nerfed harshly, whilst 0.92 limits the effect of the cap.
-            strainTime /= Math.Clamp((strainTime / osuCurrObj.HitWindow(HitResult.Great)) / 0.93, 0.92, 1);
 
             // speedBonus will be 0.0 for BPM < 200
             double speedBonus = 0.0;

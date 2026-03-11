@@ -15,13 +15,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private readonly Mod[] mods;
         private readonly int totalHits;
-        private readonly double overallDifficulty;
 
-        public OsuRatingCalculator(Mod[] mods, int totalHits, double overallDifficulty)
+        public OsuRatingCalculator(Mod[] mods, int totalHits)
         {
             this.mods = mods;
             this.totalHits = totalHits;
-            this.overallDifficulty = overallDifficulty;
         }
 
         public double ComputeAimRating(double aimDifficultyValue)
@@ -42,8 +40,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double ratingMultiplier = 1.0;
 
-            // It is important to consider accuracy difficulty when scaling with accuracy.
-            ratingMultiplier *= 0.98 + Math.Pow(Math.Max(0, overallDifficulty), 2) / 2500;
+            // OD 11.11 SS stays the same.
+            ratingMultiplier *= 1 + 119 / 4050.0;
 
             return aimRating * Math.Cbrt(ratingMultiplier);
         }
@@ -88,7 +86,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double ratingMultiplier = 1.0;
 
-            ratingMultiplier *= 0.75 + Math.Pow(Math.Max(0, overallDifficulty), 2.2) / 800;
+            //commented this out as od 11.11 ss comes out to being multiplied by ~1
+            //ratingMultiplier *= 0.75 + Math.Pow(Math.Max(0, overallDifficulty), 2.2) / 800;
+            //would be replaced by:
+            //ratingMultiplier *= 1 - 33 / 125000
 
             return readingRating * Math.Cbrt(ratingMultiplier);
         }
@@ -126,8 +127,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             ratingMultiplier *= 0.7 + 0.1 * Math.Min(1.0, totalHits / 200.0) +
                                 (totalHits > 200 ? 0.2 * Math.Min(1.0, (totalHits - 200) / 200.0) : 0.0);
 
-            // It is important to consider accuracy difficulty when scaling with accuracy.
-            ratingMultiplier *= 0.98 + Math.Pow(Math.Max(0, overallDifficulty), 2) / 2500;
+            // OD 11.11 SS stays the same.
+            ratingMultiplier *= 1 + 119 / 4050.0;
 
             return flashlightRating * Math.Sqrt(ratingMultiplier);
         }

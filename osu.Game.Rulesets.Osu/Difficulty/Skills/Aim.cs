@@ -13,6 +13,7 @@ using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Difficulty.Utils;
 using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Rulesets.Osu.Objects;
+using osu.Game.Rulesets.Scoring;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 {
@@ -22,13 +23,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     public class Aim : TimeSkill
     {
         public readonly bool IncludeSliders;
+        public readonly bool WithCheesability;
 
-        public Aim(Mod[] mods, bool includeSliders)
+        public Aim(Mod[] mods, bool includeSliders, bool withCheesability)
             : base(mods)
         {
             IncludeSliders = includeSliders;
+            WithCheesability = withCheesability;
         }
 
+        private double inaccuraciesWhileCheesing = 0;
+        private double maxStrain = 0;
         private double currentStrain;
 
         private double skillMultiplierSnap => 309.0;
@@ -53,7 +58,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         {
             double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
 
-            double snapDifficulty = SnapAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierSnap;
+            double snapDifficulty = SnapAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders, WithCheesability) * skillMultiplierSnap;
             double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current) * skillMultiplierAgility;
             double flowDifficulty = FlowAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierFlow;
 
@@ -77,6 +82,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             if (current.BaseObject is Slider)
                 sliderStrains.Add(currentStrain);
+
+            inaccuraciesWhileCheesing += isInaccurateWhileCheesed(current) * currentStrain;
+            if (currentStrain > maxStrain)
+                maxStrain = currentStrain;
 
             return currentStrain;
         }
@@ -133,6 +142,20 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         public double CountTopWeightedSliders(double difficultyValue)
             => OsuStrainUtils.CountTopWeightedSliders(sliderStrains, difficultyValue);
+
+        public double GetInaccuraciesWithCheesing() => maxStrain > 0 ? inaccuraciesWhileCheesing / maxStrain : 0;
+
+        // Check if cheesing the current object still results in a great.
+        private static int isInaccurateWhileCheesed(DifficultyHitObject current)
+        {
+            var osuCurrObj = (OsuDifficultyHitObject)current;
+
+            // Assume even on Lazer that cheesing does not happen on sliders
+            if (osuCurrObj.BaseObject is Slider)
+                return 0;
+
+            return osuCurrObj.ExtraDeltaTime > osuCurrObj.HitWindow(HitResult.Great) ? 1 : 0;
+        }
 
     }
 }

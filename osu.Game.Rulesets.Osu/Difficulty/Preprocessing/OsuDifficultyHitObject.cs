@@ -129,6 +129,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         /// </summary>
         public double SmallCircleBonus { get; private set; }
 
+        /// <summary>
+        /// The extra time to hit the circle if cheesed.
+        /// </summary>
+        public double ExtraDeltaTime { get; private set; }
+
         private readonly OsuDifficultyHitObject? lastLastDifficultyObject;
         private readonly OsuDifficultyHitObject? lastDifficultyObject;
 
@@ -148,6 +153,23 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
 
             computeSliderCursorPosition();
             setDistances(clockRate);
+
+            // Worst case if the player wanted to cheese notes while still getting 100s.
+            // The extra delta time is repeatedly halved if the delta time says constant.
+            // If a slowdown occurs (deltaTimeDifference > 0), add the slowdown to the extra delta time,
+            // and cap it back to the 50 hit window.
+            if (lastDifficultyObject != null)
+            {
+                double deltaTimeDifference = DeltaTime - lastDifficultyObject.DeltaTime;
+                ExtraDeltaTime = Math.Min(lastDifficultyObject.ExtraDeltaTime / 2.0 + Math.Max(0, deltaTimeDifference), HitWindow(HitResult.Ok));
+
+                double cheeseFromOverlap = Math.Min(1, LazyJumpDistance / 100) * (1 - Math.Min(1, lastDifficultyObject.LazyJumpDistance / 100));
+                ExtraDeltaTime = Math.Max(ExtraDeltaTime, HitWindow(HitResult.Ok) * cheeseFromOverlap);
+            }
+            else
+            {
+                ExtraDeltaTime = HitWindow(HitResult.Ok);
+            }
         }
 
         public double OpacityAt(double time, bool hidden)
@@ -194,7 +216,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
                 double deltaDifference = Math.Abs(nextDeltaTime - currDeltaTime);
 
                 double speedRatio = currDeltaTime / Math.Max(currDeltaTime, deltaDifference);
-                double windowRatio = Math.Pow(Math.Min(1, currDeltaTime / HitWindow(HitResult.Great)), 5);
+                double windowRatio = Math.Pow(Math.Min(1, currDeltaTime / (2 * HitWindow(HitResult.Great))), 5);
 
                 return 1.0 - Math.Pow(speedRatio, 1 - windowRatio);
             }
