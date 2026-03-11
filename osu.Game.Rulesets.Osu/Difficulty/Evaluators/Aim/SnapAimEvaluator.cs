@@ -13,8 +13,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
     public static class SnapAimEvaluator
     {
         private const double wide_angle_multiplier = 1.05;
-        private const double acute_angle_multiplier = 2.3;
-        private const double slider_multiplier = 1.5;
+        private const double acute_angle_multiplier = 1.95;
+        private const double slider_multiplier = 1.35;
         private const double velocity_change_multiplier = 0.9;
         private const double wiggle_multiplier = 1.02; // WARNING: Increasing this multiplier beyond 1.02 reduces difficulty as distance increases. Refer to the desmos link above the wiggle bonus calculation
         private const double maximum_repetition_nerf = 0.12;
@@ -176,7 +176,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
         // We decrease strain for distances <radius to fix cases where doubles with no aim requirement
         // have their strain buffed incredibly high due to the delta time.
         // These objects do not require any movement, so it does not make sense to award them.
-        private static double highBpmBonus(double ms, double distance) => 1 / (1 - Math.Pow(0.03, Math.Pow(ms / 1000, 0.65)))
+        private static double highBpmBonus(double ms, double distance) => 1 / (1 - Math.Pow(0.03, Math.Pow(ms / 1000, 0.45)))
                                                                           * DifficultyCalculationUtils.Smootherstep(distance, 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
 
         private static double vectorAngleRepetition(OsuDifficultyHitObject current, OsuDifficultyHitObject previous)
