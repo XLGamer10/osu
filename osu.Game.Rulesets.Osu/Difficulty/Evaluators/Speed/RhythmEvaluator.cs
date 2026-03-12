@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -14,15 +14,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 {
     public static class RhythmEvaluator
     {
-        private const int history_time_max = 5 * 1000; // 5 seconds
-        private const int history_objects_max = 32;
-        private const double rhythm_overall_multiplier = 0.8;
-        private const double rhythm_ratio_multiplier = 32.0;
-
         /// <summary>
         /// Calculates a rhythm multiplier for the difficulty of the tap associated with historic data of the current <see cref="OsuDifficultyHitObject"/>.
         /// </summary>
-        public static double EvaluateDifficultyOf(DifficultyHitObject current)
+        public static double EvaluateDifficultyOf(DifficultyHitObject current, OsuDifficultyConstants tuning)
         {
             if (current.BaseObject is Spinner)
                 return 0;
@@ -42,11 +37,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 
             bool firstDeltaSwitch = false;
 
-            int historicalNoteCount = Math.Min(current.Index, history_objects_max);
+            int historicalNoteCount = Math.Min(current.Index, tuning.RhythmHistoryObjectsMax);
 
             int rhythmStart = 0;
 
-            while (rhythmStart < historicalNoteCount - 2 && current.StartTime - current.Previous(rhythmStart).StartTime < history_time_max)
+            while (rhythmStart < historicalNoteCount - 2 && current.StartTime - current.Previous(rhythmStart).StartTime < tuning.RhythmHistoryTimeMax)
                 rhythmStart++;
 
             OsuDifficultyHitObject prevObj = (OsuDifficultyHitObject)current.Previous(rhythmStart);
@@ -60,7 +55,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
                     continue;
 
                 // scales note 0 to 1 from history to now
-                double timeDecay = (history_time_max - (current.StartTime - currObj.StartTime)) / history_time_max;
+                double timeDecay = (tuning.RhythmHistoryTimeMax - (current.StartTime - currObj.StartTime)) / tuning.RhythmHistoryTimeMax;
                 double noteDecay = (double)(historicalNoteCount - i) / historicalNoteCount;
 
                 double currHistoricalDecay = Math.Min(noteDecay, timeDecay); // either we're limited by time or limited by object count.
@@ -79,7 +74,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 
                 double windowPenalty = Math.Min(1, Math.Max(0, Math.Abs(prevDelta - currDelta) - deltaDifferenceEpsilon) / deltaDifferenceEpsilon);
 
-                double effectiveRatio = getEffectiveRatio(deltaDifference) * windowPenalty * differenceMultiplier;
+                double effectiveRatio = getEffectiveRatio(deltaDifference, tuning) * windowPenalty * differenceMultiplier;
 
                 // if previous object is a slider it might be easier to tap since you don't have to do a whole tapping motion
                 // while a full deltatime might end up some weird ratio the "unpress->tap" motion might be simple
@@ -92,7 +87,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
                     double sliderRealEndDelta = currObj.LastObjectEndDeltaTime;
                     double sliderRealDeltaDifference = Math.Max(sliderRealEndDelta, currDelta) / Math.Min(sliderRealEndDelta, currDelta);
 
-                    double sliderEffectiveRatio = Math.Min(getEffectiveRatio(sliderLazyDeltaDifference), getEffectiveRatio(sliderRealDeltaDifference));
+                    double sliderEffectiveRatio = Math.Min(getEffectiveRatio(sliderLazyDeltaDifference, tuning), getEffectiveRatio(sliderRealDeltaDifference, tuning));
                     effectiveRatio = Math.Min(sliderEffectiveRatio, effectiveRatio);
                 }
 
@@ -107,20 +102,20 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
                     {
                         // bpm change is into slider, this is easy acc window
                         if (currObj.BaseObject is Slider)
-                            effectiveRatio *= 0.5;
+                            effectiveRatio *= tuning.RhythmSliderIntoNerf;
 
                         // repeated island polarity (2 -> 4, 3 -> 5)
                         if (island.IsSimilarPolarity(previousIsland))
-                            effectiveRatio *= 0.5;
+                            effectiveRatio *= tuning.RhythmRepeatPolarityNerf;
 
                         // previous increase happened a note ago, 1/1->1/2-1/4, dont want to buff this.
                         if (lastDelta > prevDelta + deltaDifferenceEpsilon && prevDelta > currDelta + deltaDifferenceEpsilon)
-                            effectiveRatio *= 0.125;
+                            effectiveRatio *= tuning.RhythmSpeedupConsecutiveNerf;
 
                         // repeated island size (ex: triplet -> triplet)
                         // TODO: remove this nerf since its staying here only for balancing purposes because of the flawed ratio calculation
                         if (previousIsland.DeltaCount == island.DeltaCount)
-                            effectiveRatio *= 0.5;
+                            effectiveRatio *= tuning.RhythmRepeatIslandSizeNerf;
 
                         var islandCount = islandCounts.FirstOrDefault(x => x.Island.Equals(island));
 
@@ -145,7 +140,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 
                         // scale down the difficulty if the object is doubletappable
                         double doubletapness = prevObj.GetDoubletapness(currObj);
-                        effectiveRatio *= 1 - doubletapness * 0.75;
+                        effectiveRatio *= 1 - doubletapness * tuning.RhythmDoubletapScale;
 
                         rhythmComplexitySum += Math.Sqrt(effectiveRatio * startRatio) * currHistoricalDecay;
 
@@ -166,12 +161,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 
                     // bpm change is into slider, this is easy acc window
                     if (currObj.BaseObject is Slider)
-                        effectiveRatio *= 0.6;
+                        effectiveRatio *= tuning.RhythmSpeedupSliderIntoNerf;
 
                     // bpm change was from a slider, this is easier typically than circle -> circle
                     // unintentional side effect is that bursts with kicksliders at the ends might have lower difficulty than bursts without sliders
                     if (prevObj.BaseObject is Slider)
-                        effectiveRatio *= 0.6;
+                        effectiveRatio *= tuning.RhythmSpeedupSliderFromNerf;
 
                     startRatio = effectiveRatio;
 
@@ -182,15 +177,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
                 prevObj = currObj;
             }
 
-            return Math.Sqrt(4 + rhythmComplexitySum * rhythm_overall_multiplier) / 2.0; // produces multiplier that can be applied to strain. range [1, infinity) (not really though);
+            return Math.Sqrt(4 + rhythmComplexitySum * tuning.RhythmOverallScale) / 2.0; // produces multiplier that can be applied to strain. range [1, infinity) (not really though);
         }
 
-        private static double getEffectiveRatio(double deltaDifference)
+        private static double getEffectiveRatio(double deltaDifference, OsuDifficultyConstants tuning)
         {
             // Take only the fractional part of the value since we're only interested in punishing multiples
             double deltaDifferenceFraction = deltaDifference - Math.Truncate(deltaDifference);
 
-            return 1.0 + rhythm_ratio_multiplier * Math.Min(0.5, DifficultyCalculationUtils.SmoothstepBellCurve(deltaDifferenceFraction));
+            return 1.0 + tuning.RhythmRatioScale * Math.Min(0.5, DifficultyCalculationUtils.SmoothstepBellCurve(deltaDifferenceFraction));
         }
 
         private class Island : IEquatable<Island>

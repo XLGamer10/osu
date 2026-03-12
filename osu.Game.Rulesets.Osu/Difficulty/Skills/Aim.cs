@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -23,34 +23,20 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     {
         public readonly bool IncludeSliders;
 
-        public Aim(Mod[] mods, bool includeSliders)
+        private readonly OsuDifficultyConstants tuning;
+
+        public Aim(Mod[] mods, OsuDifficultyConstants tuning, bool includeSliders)
             : base(mods)
         {
+            this.tuning = tuning;
             IncludeSliders = includeSliders;
         }
 
         private double currentStrain;
 
-        private double skillMultiplierSnap => 71.0;
-        private double skillMultiplierAgility => 2.0;
-        private double skillMultiplierFlow => 244.0;
-        private double skillMultiplierTotal => 1.1;
-        private double meanExponent => 1.2;
-
-        /// <summary>
-        /// The number of sections with the highest strains, which the peak strain reductions will apply to.
-        /// This is done in order to decrease their impact on the overall difficulty of the map for this skill.
-        /// </summary>
-        private int reducedSectionCount => 10;
-
-        /// <summary>
-        /// The baseline multiplier applied to the section with the biggest strain.
-        /// </summary>
-        private double reducedStrainBaseline => 0.75;
-
         private readonly List<double> sliderStrains = new List<double>();
 
-        private double strainDecay(double ms) => Math.Pow(0.15, ms / 1000);
+        private double strainDecay(double ms) => Math.Pow(tuning.AimStrainDecayBase, ms / 1000);
 
         protected override double CalculateInitialStrain(double time, DifficultyHitObject current) =>
             currentStrain * strainDecay(time - current.Previous(0).StartTime);
@@ -59,9 +45,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         {
             double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
 
-            double snapDifficulty = SnapAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierSnap;
-            double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current) * skillMultiplierAgility;
-            double flowDifficulty = FlowAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierFlow;
+            double snapDifficulty = SnapAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders, tuning) * tuning.AimSkillMultiplierSnap;
+            double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current, tuning) * tuning.AimSkillMultiplierAgility;
+            double flowDifficulty = FlowAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders, tuning) * tuning.AimSkillMultiplierFlow;
 
             if (Mods.Any(m => m is OsuModTouchDevice))
             {
@@ -92,14 +78,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             // We compare flow to combined snap and agility because snap by itself doesn't have enough difficulty to be above flow on streams
             // Agility on the other hand is supposed to measure the rate of cursor velocity changes while snapping
             // So snapping every circle on a stream requires an enormous amount of agility at which point it's easier to flow
-            double combinedSnapDifficulty = DifficultyCalculationUtils.Norm(meanExponent, snapDifficulty, agilityDifficulty);
+            double combinedSnapDifficulty = DifficultyCalculationUtils.Norm(tuning.AimMeanExponent, snapDifficulty, agilityDifficulty);
 
             double pSnap = calculateSnapFlowProbability(flowDifficulty / combinedSnapDifficulty);
             double pFlow = 1 - pSnap;
 
             double totalDifficulty = combinedSnapDifficulty * pSnap + flowDifficulty * pFlow;
 
-            double totalStrain = totalDifficulty * skillMultiplierTotal;
+            double totalStrain = totalDifficulty * tuning.AimSkillMultiplierTotal;
 
             return totalStrain;
         }
@@ -163,10 +149,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             List<double> strains = peaks.OrderDescending().ToList();
 
             // We are reducing the highest strains first to account for extreme difficulty spikes
-            for (int i = 0; i < Math.Min(strains.Count, reducedSectionCount); i++)
+            for (int i = 0; i < Math.Min(strains.Count, tuning.AimReducedSectionCount); i++)
             {
-                double scale = Math.Log10(Interpolation.Lerp(1, 10, Math.Clamp((float)i / reducedSectionCount, 0, 1)));
-                strains[i] *= Interpolation.Lerp(reducedStrainBaseline, 1.0, scale);
+                double scale = Math.Log10(Interpolation.Lerp(1, 10, Math.Clamp((float)i / tuning.AimReducedSectionCount, 0, 1)));
+                strains[i] *= Interpolation.Lerp(tuning.AimReducedStrainBaseline, 1.0, scale);
             }
 
             // Difficulty is the weighted sum of the highest strains from every section.

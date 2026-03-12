@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Osu.Difficulty;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Rulesets.Osu.Objects;
@@ -14,14 +15,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
 {
     public static class FlashlightEvaluator
     {
-        private const double max_opacity_bonus = 0.4;
-        private const double hidden_bonus = 0.2;
-
-        private const double min_velocity = 0.5;
-        private const double slider_multiplier = 1.3;
-
-        private const double min_angle_multiplier = 0.2;
-
         /// <summary>
         /// Evaluates the difficulty of memorising and hitting an object, based on:
         /// <list type="bullet">
@@ -32,7 +25,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         /// <item><description>and whether the hidden mod is enabled.</description></item>
         /// </list>
         /// </summary>
-        public static double EvaluateDifficultyOf(DifficultyHitObject current, IReadOnlyList<Mod> mods)
+        public static double EvaluateDifficultyOf(DifficultyHitObject current, IReadOnlyList<Mod> mods, OsuDifficultyConstants tuning)
         {
             if (current.BaseObject is Spinner)
                 return 0;
@@ -70,7 +63,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                     double stackNerf = Math.Min(1.0, (currentObj.LazyJumpDistance / scalingFactor) / 25.0);
 
                     // Bonus based on how visible the object is.
-                    double opacityBonus = 1.0 + max_opacity_bonus * (1.0 - osuCurrent.OpacityAt(currentHitObject.StartTime, mods.OfType<OsuModHidden>().Any(m => !m.OnlyFadeApproachCircles.Value)));
+                    double opacityBonus = 1.0 + tuning.FlashlightMaxOpacityBonusScale * (1.0 - osuCurrent.OpacityAt(currentHitObject.StartTime, mods.OfType<OsuModHidden>().Any(m => !m.OnlyFadeApproachCircles.Value)));
 
                     result += stackNerf * opacityBonus * scalingFactor * jumpDistance / cumulativeStrainTime;
 
@@ -89,10 +82,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
 
             // Additional bonus for Hidden due to there being no approach circles.
             if (mods.OfType<OsuModHidden>().Any())
-                result *= 1.0 + hidden_bonus;
+                result *= 1.0 + tuning.FlashlightHiddenBonusScale;
 
             // Nerf patterns with repeated angles.
-            result *= min_angle_multiplier + (1.0 - min_angle_multiplier) / (angleRepeatCount + 1.0);
+            result *= tuning.FlashlightMinAngleScale + (1.0 - tuning.FlashlightMinAngleScale) / (angleRepeatCount + 1.0);
 
             double sliderBonus = 0.0;
 
@@ -102,7 +95,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                 double pixelTravelDistance = osuCurrent.LazyTravelDistance / scalingFactor;
 
                 // Reward sliders based on velocity.
-                sliderBonus = Math.Pow(Math.Max(0.0, pixelTravelDistance / osuCurrent.TravelTime - min_velocity), 0.5);
+                sliderBonus = Math.Pow(Math.Max(0.0, pixelTravelDistance / osuCurrent.TravelTime - tuning.FlashlightMinVelocityScale), 0.5);
 
                 // Longer sliders require more memorisation.
                 sliderBonus *= pixelTravelDistance;
@@ -112,7 +105,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                     sliderBonus /= (osuSlider.RepeatCount + 1);
             }
 
-            result += sliderBonus * slider_multiplier;
+            result += sliderBonus * tuning.FlashlightSliderBonusScale;
 
             return result;
         }

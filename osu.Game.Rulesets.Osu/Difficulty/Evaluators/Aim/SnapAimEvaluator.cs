@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -12,14 +12,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 {
     public static class SnapAimEvaluator
     {
-        private const double wide_angle_multiplier = 1.05;
-        private const double acute_angle_multiplier = 2.41;
-        private const double slider_multiplier = 1.5;
-        private const double velocity_change_multiplier = 0.9;
-        private const double wiggle_multiplier = 1.02; // WARNING: Increasing this multiplier beyond 1.02 reduces difficulty as distance increases. Refer to the desmos link above the wiggle bonus calculation
-        private const double maximum_repetition_nerf = 0.15;
-        private const double maximum_vector_influence = 0.5;
-
         /// <summary>
         /// Evaluates the difficulty of aiming the current object, based on:
         /// <list type="bullet">
@@ -29,7 +21,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
         /// <item><description>and slider difficulty.</description></item>
         /// </list>
         /// </summary>
-        public static double EvaluateDifficultyOf(DifficultyHitObject current, bool withSliderTravelDistance)
+        public static double EvaluateDifficultyOf(DifficultyHitObject current, bool withSliderTravelDistance, OsuDifficultyConstants tuning)
         {
             if (current.BaseObject is Spinner || current.Index <= 1 || current.Previous(0).BaseObject is Spinner)
                 return 0;
@@ -153,22 +145,22 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             }
 
             // Penalize angle repetition.
-            aimStrain *= vectorAngleRepetition(osuCurrObj, osuLastObj);
+            aimStrain *= vectorAngleRepetition(osuCurrObj, osuLastObj, tuning);
 
-            aimStrain += wiggleBonus * wiggle_multiplier;
-            aimStrain += velocityChangeBonus * velocity_change_multiplier;
+            aimStrain += wiggleBonus * tuning.SnapAimWiggleScale;
+            aimStrain += velocityChangeBonus * tuning.SnapAimVelocityChangeScale;
 
             // Add in acute angle bonus or wide angle bonus, whichever is larger.
-            aimStrain += Math.Max(acuteAngleBonus * acute_angle_multiplier, wideAngleBonus * wide_angle_multiplier);
+            aimStrain += Math.Max(acuteAngleBonus * tuning.SnapAimAcuteAngleScale, wideAngleBonus * tuning.SnapAimWideAngleScale);
 
             // Add in additional slider velocity bonus.
             if (withSliderTravelDistance)
-                aimStrain += (sliderBonus < 1 ? sliderBonus : Math.Pow(sliderBonus, 0.75)) * slider_multiplier;
+                aimStrain += (sliderBonus < 1 ? sliderBonus : Math.Pow(sliderBonus, 0.75)) * tuning.SnapAimSliderScale;
 
             // Apply high circle size bonus
             aimStrain *= osuCurrObj.SmallCircleBonus;
 
-            aimStrain *= highBpmBonus(osuCurrObj.AdjustedDeltaTime, osuCurrObj.LazyJumpDistance);
+            aimStrain *= highBpmBonus(osuCurrObj.AdjustedDeltaTime, osuCurrObj.LazyJumpDistance, tuning);
 
             return aimStrain;
         }
@@ -176,10 +168,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
         // We decrease strain for distances <radius to fix cases where doubles with no aim requirement
         // have their strain buffed incredibly high due to the delta time.
         // These objects do not require any movement, so it does not make sense to award them.
-        private static double highBpmBonus(double ms, double distance) => 1 / (1 - Math.Pow(0.03, Math.Pow(ms / 1000, 0.65)))
-                                                                          * DifficultyCalculationUtils.Smootherstep(distance, 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
+        private static double highBpmBonus(double ms, double distance, OsuDifficultyConstants tuning) => 1 / (1 - Math.Pow(tuning.SnapAimHighBpmBonusBase, Math.Pow(ms / 1000, tuning.SnapAimHighBpmExponent)))
+                                                                                                         * DifficultyCalculationUtils.Smootherstep(distance, 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
 
-        private static double vectorAngleRepetition(OsuDifficultyHitObject current, OsuDifficultyHitObject previous)
+        private static double vectorAngleRepetition(OsuDifficultyHitObject current, OsuDifficultyHitObject previous, OsuDifficultyConstants tuning)
         {
             if (current.Angle == null || previous.Angle == null)
                 return 1;
@@ -217,9 +209,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
             double angleDifferenceAdjusted = Math.Cos(2 * Math.Min(double.DegreesToRadians(45), Math.Abs(currAngle - lastAngle) * stackFactor));
 
-            double baseNerf = 1 - maximum_repetition_nerf * CalcAcuteAngleBonus(lastAngle) * angleDifferenceAdjusted;
+            double baseNerf = 1 - tuning.SnapAimMaxRepetitionNerf * CalcAcuteAngleBonus(lastAngle) * angleDifferenceAdjusted;
 
-            return Math.Pow(baseNerf + (1 - baseNerf) * vectorRepetition * maximum_vector_influence * stackFactor, 2);
+            return Math.Pow(baseNerf + (1 - baseNerf) * vectorRepetition * tuning.SnapAimMaxVectorInfluence * stackFactor, 2);
         }
 
         private static double calcWideAngleBonus(double angle) => DifficultyCalculationUtils.Smoothstep(angle, double.DegreesToRadians(40), double.DegreesToRadians(140));

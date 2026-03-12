@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -19,32 +19,30 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// </summary>
     public class Speed : HarmonicSkill
     {
-        private double skillMultiplier => 1.15;
-
+        private readonly OsuDifficultyConstants tuning;
         private readonly List<double> sliderStrains = new List<double>();
 
         private double currentDifficulty;
 
-        private double strainDecayBase => 0.3;
-
-        protected override double HarmonicScale => 20;
-        protected override double DecayExponent => 0.9;
-
-        public Speed(Mod[] mods)
+        public Speed(Mod[] mods, OsuDifficultyConstants tuning)
             : base(mods)
         {
+            this.tuning = tuning;
         }
 
-        private double strainDecay(double ms) => Math.Pow(strainDecayBase, ms / 1000);
+        protected override double HarmonicScale => tuning.SpeedHarmonicScale;
+        protected override double DecayExponent => tuning.SpeedDecayExponent;
+
+        private double strainDecay(double ms) => Math.Pow(tuning.SpeedStrainDecayBase, ms / 1000);
 
         protected override double ObjectDifficultyOf(DifficultyHitObject current)
         {
             double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
 
             currentDifficulty *= decay;
-            currentDifficulty += SpeedEvaluator.EvaluateDifficultyOf(current) * (1 - decay) * skillMultiplier;
+            currentDifficulty += SpeedEvaluator.EvaluateDifficultyOf(current, tuning) * (1 - decay) * tuning.SpeedSkillMultiplier;
 
-            double currentRhythm = RhythmEvaluator.EvaluateDifficultyOf(current);
+            double currentRhythm = RhythmEvaluator.EvaluateDifficultyOf(current, tuning);
 
             double totalDifficulty = currentDifficulty * currentRhythm;
 

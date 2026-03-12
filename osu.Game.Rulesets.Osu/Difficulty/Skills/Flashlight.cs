@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -15,24 +15,24 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// </summary>
     public class Flashlight : StrainSkill
     {
-        public Flashlight(Mod[] mods)
+        private readonly OsuDifficultyConstants tuning;
+
+        public Flashlight(Mod[] mods, OsuDifficultyConstants tuning)
             : base(mods)
         {
+            this.tuning = tuning;
         }
-
-        private double skillMultiplier => 0.056;
-        private double strainDecayBase => 0.15;
 
         private double currentStrain;
 
-        private double strainDecay(double ms) => Math.Pow(strainDecayBase, ms / 1000);
+        private double strainDecay(double ms) => Math.Pow(tuning.FlashlightStrainDecayBase, ms / 1000);
 
         protected override double CalculateInitialStrain(double time, DifficultyHitObject current) => currentStrain * strainDecay(time - current.Previous(0).StartTime);
 
         protected override double StrainValueAt(DifficultyHitObject current)
         {
             currentStrain *= strainDecay(current.DeltaTime);
-            currentStrain += FlashlightEvaluator.EvaluateDifficultyOf(current, Mods) * skillMultiplier;
+            currentStrain += FlashlightEvaluator.EvaluateDifficultyOf(current, Mods, tuning) * tuning.FlashlightSkillMultiplier;
 
             return currentStrain;
         }

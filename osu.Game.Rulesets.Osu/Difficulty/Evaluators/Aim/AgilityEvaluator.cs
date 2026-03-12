@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -16,7 +16,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
         /// <summary>
         /// Evaluates the difficulty of fast aiming
         /// </summary>
-        public static double EvaluateDifficultyOf(DifficultyHitObject current)
+        public static double EvaluateDifficultyOf(DifficultyHitObject current, OsuDifficultyConstants tuning)
         {
             if (current.BaseObject is Spinner)
                 return 0;
@@ -31,11 +31,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
             double strain = distanceScaled * 1000 / osuCurrObj.AdjustedDeltaTime;
 
-            strain *= highBpmBonus(osuCurrObj.AdjustedDeltaTime);
+            strain *= highBpmBonus(osuCurrObj.AdjustedDeltaTime, tuning);
 
             return strain * DifficultyCalculationUtils.Smootherstep(distance, 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
         }
 
-        private static double highBpmBonus(double ms) => 1 / (1 - Math.Pow(0.3, Math.Pow(ms / 1000, 0.9)));
+        private static double highBpmBonus(double ms, OsuDifficultyConstants tuning) => 1 / (1 - Math.Pow(tuning.AgilityHighBpmBonusBase, Math.Pow(ms / 1000, tuning.AgilityHighBpmExponent)));
     }
 }

@@ -108,6 +108,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         /// </summary>
         public int SpinnerCount { get; set; }
 
+        [JsonIgnore]
+        public OsuDifficultyConstants Tuning { get; init; } = OsuDifficultyConstants.Default;
+
         public override IEnumerable<(int attributeId, object value)> ToDatabaseAttributes()
         {
             foreach (var v in base.ToDatabaseAttributes())

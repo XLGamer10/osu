@@ -72,6 +72,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         protected override PerformanceAttributes CreatePerformanceAttributes(ScoreInfo score, DifficultyAttributes attributes)
         {
             var osuAttributes = (OsuDifficultyAttributes)attributes;
+            var tuning = osuAttributes.Tuning;
 
             usingClassicSliderAccuracy = score.Mods.OfType<OsuModClassic>().Any(m => m.NoSliderHeadAccuracy.Value);
             usingScoreV2 = score.Mods.Any(m => m is ModScoreV2);
@@ -146,13 +147,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double aimValue = computeAimValue(score, osuAttributes);
             double speedValue = computeSpeedValue(score, osuAttributes);
-            double accuracyValue = computeAccuracyValue(score, osuAttributes);
+            double accuracyValue = computeAccuracyValue(score, osuAttributes) * tuning.AccuracyPerformanceScale;
 
             double readingValue = computeReadingValue(osuAttributes);
             double flashlightValue = computeFlashlightValue(score, osuAttributes);
             double cognitionValue = OsuDifficultyCalculator.SumCognitionDifficulty(readingValue, flashlightValue);
 
-            double totalValue = DifficultyCalculationUtils.Norm(PERFORMANCE_NORM_EXPONENT, aimValue, speedValue, accuracyValue, cognitionValue) * multiplier;
+            double totalValue = DifficultyCalculationUtils.Norm(PERFORMANCE_NORM_EXPONENT, aimValue, speedValue, accuracyValue, cognitionValue) * multiplier * tuning.TotalPerformanceScale;
 
             return new OsuPerformanceAttributes
             {

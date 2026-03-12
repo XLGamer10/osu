@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -12,12 +12,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 {
     public static class FlowAimEvaluator
     {
-        private const double velocity_change_multiplier = 2.0;
-
         /// <summary>
         /// Evaluates difficulty of "flow aim" - aiming pattern where player doesn't stop their cursor on every object and instead "flows" through them.
         /// </summary>
-        public static double EvaluateDifficultyOf(DifficultyHitObject current, bool withSliderTravelDistance)
+        public static double EvaluateDifficultyOf(DifficultyHitObject current, bool withSliderTravelDistance, OsuDifficultyConstants tuning)
         {
             if (current.BaseObject is Spinner || current.Index <= 1 || current.Previous(0).BaseObject is Spinner)
                 return 0;
@@ -91,7 +89,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
                 double overlapVelocityBuff = Math.Min(OsuDifficultyHitObject.NORMALISED_DIAMETER * 1.25 / Math.Min(osuCurrObj.AdjustedDeltaTime, osuLastObj.AdjustedDeltaTime),
                     Math.Abs(prevVelocity - currVelocity));
 
-                flowDifficulty += overlapVelocityBuff * distRatio * velocity_change_multiplier;
+                flowDifficulty += overlapVelocityBuff * distRatio * tuning.FlowVelocityChangeScale;
             }
 
             if (osuCurrObj.BaseObject is Slider)
