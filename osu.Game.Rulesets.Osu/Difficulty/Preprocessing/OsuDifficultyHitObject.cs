@@ -129,6 +129,70 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         /// </summary>
         public double SmallCircleBonus { get; private set; }
 
+        /// <summary>
+        /// Struct containing the rhythmic surprise at different scales, from finest (E0 = note-to-note)
+        /// to coarsest (E5 = 32 notes to 32 notes)
+        /// </summary>
+
+        public RhythmScaleStates RhythmState { get; set; }
+
+        public struct RhythmScaleStates
+        {
+            public double E0 { get; private set; }
+            public double E1 { get; private set; }
+            public double E2 { get; private set; }
+            public double E3 { get; private set; }
+            public double E4 { get; private set; }
+            public double E5 { get; private set; }
+
+            public void ClearRhythmState()
+            {
+                E0 = E1 = E2 = E3 = E4 = E5 = 0.0;
+            }
+
+            public void AddEnergy(int index, double amount)
+            {
+                switch (index)
+                {
+                    case 0:
+                        E0 += amount;
+                        break;
+
+                    case 1:
+                        E1 += amount;
+                        break;
+
+                    case 2:
+                        E2 += amount;
+                        break;
+
+                    case 3:
+                        E3 += amount;
+                        break;
+
+                    case 4:
+                        E4 += amount;
+                        break;
+
+                    case 5:
+                        E5 += amount;
+                        break;
+                }
+            }
+
+            public void ApplyDecay(double dt, double tau0, double resetScale)
+            {
+                E0 = (E0 * Math.Exp(-dt / (tau0 * 1))) * resetScale;
+                E1 = (E1 * Math.Exp(-dt / (tau0 * 2))) * resetScale;
+                E2 = (E2 * Math.Exp(-dt / (tau0 * 4))) * resetScale;
+                E3 = (E3 * Math.Exp(-dt / (tau0 * 8))) * resetScale;
+                E4 = (E4 * Math.Exp(-dt / (tau0 * 16))) * resetScale;
+                E5 = (E5 * Math.Exp(-dt / (tau0 * 32))) * resetScale;
+            }
+
+            public double RhythmScaleTotalEnergy => E0 + E1 + E2 + E3 + E4 + E5;
+        }
+
         private readonly OsuDifficultyHitObject? lastLastDifficultyObject;
         private readonly OsuDifficultyHitObject? lastDifficultyObject;
 
