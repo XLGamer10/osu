@@ -23,28 +23,35 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         private const double minimum_angle_relevancy_time = 2000; // 2 seconds
         private const double maximum_angle_relevancy_time = 200;
 
-        public static double EvaluateDifficultyOf(DifficultyHitObject current, bool hidden)
+        public static double EvaluateDifficultyOf(DifficultyHitObject current, bool hidden, bool withCheesability)
         {
             if (current.BaseObject is Spinner || current.Index == 0)
                 return 0;
 
-            var currObj = (OsuDifficultyHitObject)current;
-            var nextObj = (OsuDifficultyHitObject)current.Next(0);
+            var osuCurrObj = (OsuDifficultyHitObject)current;
+            var osuNextObj = (OsuDifficultyHitObject)current.Next(0);
 
-            double velocity = Math.Max(1, currObj.LazyJumpDistance / currObj.AdjustedDeltaTime); // Only allow velocity to buff
+            double currDeltaTime = osuCurrObj.AdjustedDeltaTime;
 
-            double currentVisibleObjectDensity = retrieveCurrentVisibleObjectDensity(currObj);
-            double pastObjectDifficultyInfluence = getPastObjectDifficultyInfluence(currObj);
+            if (withCheesability)
+            {
+                currDeltaTime += osuCurrObj.ExtraDeltaTime;
+            }
 
-            double constantAngleNerfFactor = getConstantAngleNerfFactor(currObj);
+            double velocity = Math.Max(1, osuCurrObj.LazyJumpDistance / currDeltaTime); // Only allow velocity to buff
 
-            double noteDensityDifficulty = calculateDensityDifficulty(nextObj, velocity, constantAngleNerfFactor, pastObjectDifficultyInfluence, currentVisibleObjectDensity);
+            double currentVisibleObjectDensity = retrieveCurrentVisibleObjectDensity(osuCurrObj);
+            double pastObjectDifficultyInfluence = getPastObjectDifficultyInfluence(osuCurrObj);
+
+            double constantAngleNerfFactor = getConstantAngleNerfFactor(osuCurrObj, withCheesability);
+
+            double noteDensityDifficulty = calculateDensityDifficulty(osuNextObj, velocity, constantAngleNerfFactor, pastObjectDifficultyInfluence, currentVisibleObjectDensity);
 
             double hiddenDifficulty = hidden
-                ? calculateHiddenDifficulty(currObj, pastObjectDifficultyInfluence, currentVisibleObjectDensity, velocity, constantAngleNerfFactor)
+                ? calculateHiddenDifficulty(osuCurrObj, pastObjectDifficultyInfluence, currentVisibleObjectDensity, velocity, constantAngleNerfFactor, withCheesability)
                 : 0;
 
-            double preemptDifficulty = calculatePreemptDifficulty(velocity, constantAngleNerfFactor, currObj.Preempt);
+            double preemptDifficulty = calculatePreemptDifficulty(velocity, constantAngleNerfFactor, osuCurrObj.Preempt);
 
             double difficulty = DifficultyCalculationUtils.Norm(1.5, preemptDifficulty, hiddenDifficulty, noteDensityDifficulty);
 
@@ -60,16 +67,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         /// <item><description>density of objects visible when the current object needs to be clicked,</description></item>
         /// /// </list>
         /// </summary>
-        private static double calculateDensityDifficulty(OsuDifficultyHitObject? nextObj, double velocity, double constantAngleNerfFactor,
+        private static double calculateDensityDifficulty(OsuDifficultyHitObject? osuNextObj, double velocity, double constantAngleNerfFactor,
                                                          double pastObjectDifficultyInfluence, double currentVisibleObjectDensity)
         {
             // Consider future densities too because it can make the path the cursor takes less clear
             double futureObjectDifficultyInfluence = Math.Sqrt(currentVisibleObjectDensity);
 
-            if (nextObj != null)
+            if (osuNextObj != null)
             {
                 // Reduce difficulty if movement to next object is small
-                futureObjectDifficultyInfluence *= DifficultyCalculationUtils.Smootherstep(nextObj.LazyJumpDistance, 15, distance_influence_threshold);
+                futureObjectDifficultyInfluence *= DifficultyCalculationUtils.Smootherstep(osuNextObj.LazyJumpDistance, 15, distance_influence_threshold);
             }
 
             // Value higher note densities exponentially
@@ -114,11 +121,18 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         /// <item><description>if the current object is perfectly stacked to the previous one</description></item>
         /// </list>
         /// </summary>
-        private static double calculateHiddenDifficulty(OsuDifficultyHitObject currObj, double pastObjectDifficultyInfluence, double currentVisibleObjectDensity, double velocity,
-                                                        double constantAngleNerfFactor)
+        private static double calculateHiddenDifficulty(OsuDifficultyHitObject osuCurrObj, double pastObjectDifficultyInfluence, double currentVisibleObjectDensity, double velocity,
+                                                        double constantAngleNerfFactor, bool withCheesability)
         {
+            double currDeltaTime = osuCurrObj.AdjustedDeltaTime;
+
+            if (withCheesability)
+            {
+                currDeltaTime += osuCurrObj.ExtraDeltaTime;
+            }
+
             // Higher preempt means that time spent invisible is higher too, we want to reward that
-            double preemptFactor = Math.Pow(currObj.Preempt, 2.2) * 0.01;
+            double preemptFactor = Math.Pow(osuCurrObj.Preempt, 2.2) * 0.01;
 
             // Account for both past and current densities
             double densityFactor = Math.Pow(currentVisibleObjectDensity + pastObjectDifficultyInfluence, 3.3) * 3;
@@ -128,29 +142,29 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
             // Apply a soft cap to general HD reading to account for partial memorization
             hiddenDifficulty = Math.Pow(hiddenDifficulty, 0.4) * hidden_multiplier;
 
-            var previousObj = (OsuDifficultyHitObject)currObj.Previous(0);
+            var previousObj = (OsuDifficultyHitObject)osuCurrObj.Previous(0);
 
             // Buff perfect stacks only if current note is completely invisible at the time you click the previous note.
-            if (currObj.LazyJumpDistance == 0 && currObj.OpacityAt(previousObj.BaseObject.StartTime, true) == 0 && previousObj.StartTime > currObj.StartTime - currObj.Preempt)
-                hiddenDifficulty += hidden_multiplier * 2500 / Math.Pow(currObj.AdjustedDeltaTime, 1.5); // Perfect stacks are harder the less time between notes
+            if (osuCurrObj.LazyJumpDistance == 0 && osuCurrObj.OpacityAt(previousObj.BaseObject.StartTime, true) == 0 && previousObj.StartTime > osuCurrObj.StartTime - osuCurrObj.Preempt)
+                hiddenDifficulty += hidden_multiplier * 2500 / Math.Pow(currDeltaTime, 1.5); // Perfect stacks are harder the less time between notes
 
             return hiddenDifficulty;
         }
 
-        private static double getPastObjectDifficultyInfluence(OsuDifficultyHitObject currObj)
+        private static double getPastObjectDifficultyInfluence(OsuDifficultyHitObject osuCurrObj)
         {
             double pastObjectDifficultyInfluence = 0;
 
-            foreach (var loopObj in retrievePastVisibleObjects(currObj))
+            foreach (var osuLoopObj in retrievePastVisibleObjects(osuCurrObj))
             {
-                double loopDifficulty = currObj.OpacityAt(loopObj.BaseObject.StartTime, false);
+                double loopDifficulty = osuCurrObj.OpacityAt(osuLoopObj.BaseObject.StartTime, false);
 
                 // When aiming an object small distances mean previous objects may be cheesed, so it doesn't matter whether they were arranged confusingly.
-                loopDifficulty *= DifficultyCalculationUtils.Smootherstep(loopObj.LazyJumpDistance, 15, distance_influence_threshold);
+                loopDifficulty *= DifficultyCalculationUtils.Smootherstep(osuLoopObj.LazyJumpDistance, 15, distance_influence_threshold);
 
                 // Account less for objects close to the max reading window
-                double timeBetweenCurrAndLoopObj = currObj.StartTime - loopObj.StartTime;
-                double timeNerfFactor = getTimeNerfFactor(timeBetweenCurrAndLoopObj);
+                double timeBetweenCurrAndosuLoopObj = osuCurrObj.StartTime - osuLoopObj.StartTime;
+                double timeNerfFactor = getTimeNerfFactor(timeBetweenCurrAndosuLoopObj);
 
                 loopDifficulty *= timeNerfFactor;
                 pastObjectDifficultyInfluence += loopDifficulty;
@@ -188,8 +202,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                     current.StartTime + hitObject.Preempt < hitObject.StartTime) // Object not visible at the time current object needs to be clicked.
                     break;
 
-                double timeBetweenCurrAndLoopObj = hitObject.StartTime - current.StartTime;
-                double timeNerfFactor = getTimeNerfFactor(timeBetweenCurrAndLoopObj);
+                double timeBetweenCurrAndosuLoopObj = hitObject.StartTime - current.StartTime;
+                double timeNerfFactor = getTimeNerfFactor(timeBetweenCurrAndosuLoopObj);
 
                 visibleObjectCount += hitObject.OpacityAt(current.BaseObject.StartTime, false) * timeNerfFactor;
 
@@ -202,7 +216,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         // Returns a factor of how often the current object's angle has been repeated in a certain time frame.
         // It does this by checking the difference in angle between current and past objects and sums them based on a range of similarity.
         // https://www.desmos.com/calculator/eb057a4822
-        private static double getConstantAngleNerfFactor(OsuDifficultyHitObject current)
+        private static double getConstantAngleNerfFactor(OsuDifficultyHitObject current, bool withCheesability)
         {
             double constantAngleCount = 0;
             int index = 0;
@@ -210,23 +224,30 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
 
             while (currentTimeGap < minimum_angle_relevancy_time)
             {
-                var loopObj = (OsuDifficultyHitObject)current.Previous(index);
+                var osuLoopObj = (OsuDifficultyHitObject)current.Previous(index);
 
-                if (loopObj.IsNull())
+                if (osuLoopObj.IsNull())
                     break;
 
-                // Account less for objects that are close to the time limit.
-                double longIntervalFactor = 1 - DifficultyCalculationUtils.ReverseLerp(loopObj.AdjustedDeltaTime, maximum_angle_relevancy_time, minimum_angle_relevancy_time);
+                double loopDeltaTime = osuLoopObj.AdjustedDeltaTime;
 
-                if (loopObj.Angle.IsNotNull() && current.Angle.IsNotNull())
+                if (withCheesability)
                 {
-                    double angleDifference = Math.Abs(current.Angle.Value - loopObj.Angle.Value);
-                    double stackFactor = DifficultyCalculationUtils.Smootherstep(loopObj.LazyJumpDistance, 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
+                    loopDeltaTime += osuLoopObj.ExtraDeltaTime;
+                }
+
+                // Account less for objects that are close to the time limit.
+                double longIntervalFactor = 1 - DifficultyCalculationUtils.ReverseLerp(loopDeltaTime, maximum_angle_relevancy_time, minimum_angle_relevancy_time);
+
+                if (osuLoopObj.Angle.IsNotNull() && current.Angle.IsNotNull())
+                {
+                    double angleDifference = Math.Abs(current.Angle.Value - osuLoopObj.Angle.Value);
+                    double stackFactor = DifficultyCalculationUtils.Smootherstep(osuLoopObj.LazyJumpDistance, 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
 
                     constantAngleCount += Math.Cos(3 * Math.Min(double.DegreesToRadians(30), angleDifference * stackFactor)) * longIntervalFactor;
                 }
 
-                currentTimeGap = current.StartTime - loopObj.StartTime;
+                currentTimeGap = current.StartTime - osuLoopObj.StartTime;
                 index++;
             }
 
