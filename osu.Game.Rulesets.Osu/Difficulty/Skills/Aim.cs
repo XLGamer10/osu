@@ -10,7 +10,6 @@ using osu.Game.Rulesets.Difficulty.Utils;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
-using osu.Game.Rulesets.Osu.Difficulty.Utils;
 using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Scoring;
@@ -36,9 +35,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double maxStrain = 0;
         private double currentStrain;
 
-        private double skillMultiplierSnap => 360.0;
-        private double skillMultiplierAgility => 13.5;
-        private double skillMultiplierFlow => 1100.0;
+        private double skillMultiplierSnap => 520.0;
+        private double skillMultiplierAgility => 15.5;
+        private double skillMultiplierFlow => 1030.0;
         private double skillMultiplierTotal => 1.1;
         private double meanExponent => 1.2;
 
@@ -58,6 +57,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         {
             double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
 
+            double angleDifficulty = AngleEvaluator.EvaluateDifficultyOf(current, IncludeSliders, WithCheesability) * skillMultiplierSnap;
             double snapDifficulty = SnapAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders, WithCheesability) * skillMultiplierSnap;
             double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current) * skillMultiplierAgility;
             double flowDifficulty = FlowAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierFlow;
@@ -75,7 +75,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 flowDifficulty *= 0.1;
             }
 
-            double totalDifficulty = calculateTotalValue(snapDifficulty, agilityDifficulty, flowDifficulty);
+            double totalDifficulty = calculateTotalValue(angleDifficulty, snapDifficulty, agilityDifficulty, flowDifficulty);
 
             currentStrain *= decay;
             currentStrain += totalDifficulty * (1 - decay);
@@ -90,12 +90,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return currentStrain;
         }
 
-        private double calculateTotalValue(double snapDifficulty, double agilityDifficulty, double flowDifficulty)
+        private double calculateTotalValue(double angleDifficulty, double snapDifficulty, double agilityDifficulty, double flowDifficulty)
         {
             // We compare flow to combined snap and agility because snap by itself doesn't have enough difficulty to be above flow on streams
             // Agility on the other hand is supposed to measure the rate of cursor velocity changes while snapping
             // So snapping every circle on a stream requires an enormous amount of agility at which point it's easier to flow
-            double combinedSnapDifficulty = DifficultyCalculationUtils.Norm(meanExponent, snapDifficulty, agilityDifficulty);
+            double combinedSnapDifficulty = DifficultyCalculationUtils.Norm(meanExponent, angleDifficulty, snapDifficulty, agilityDifficulty);
 
             double pSnap = calculateSnapFlowProbability(flowDifficulty / combinedSnapDifficulty);
             double pFlow = 1 - pSnap;
@@ -141,7 +141,18 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         }
 
         public double CountTopWeightedSliders(double difficultyValue)
-            => OsuStrainUtils.CountTopWeightedSliders(sliderStrains, difficultyValue);
+        {
+            if (sliderStrains.Count == 0)
+                return 0;
+
+            double consistentTopStrain = difficultyValue / 10; // What would the top strain be if all strain values were identical
+
+            if (consistentTopStrain == 0)
+                return 0;
+
+            // Use a weighted sum of all strains. Constants are arbitrary and give nice values
+            return sliderStrains.Sum(s => DifficultyCalculationUtils.Logistic(s / consistentTopStrain, 0.88, 10, 1.1));
+        }
 
         public double GetInaccuraciesWithCheesing() => maxStrain > 0 ? inaccuraciesWhileCheesing / maxStrain : 0;
 
