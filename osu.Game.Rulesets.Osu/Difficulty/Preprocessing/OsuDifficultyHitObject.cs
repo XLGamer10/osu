@@ -130,8 +130,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         public double SmallCircleBonus { get; private set; }
 
         /// <summary>
-        /// Struct containing the rhythmic surprise at different scales, from finest (E0 = note-to-note)
-        /// to coarsest (E5 = 32 notes to 32 notes)
+        /// Struct containing the rhythmic surprise at different scales, from finest (E0 = 1-note predictor)
+        /// to coarsest (E5 = 32-note predictor)
         /// </summary>
 
         public RhythmScaleStates RhythmState { get; set; }

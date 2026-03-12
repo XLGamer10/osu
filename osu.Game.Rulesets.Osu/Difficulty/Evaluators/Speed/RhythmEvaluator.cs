@@ -16,9 +16,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
         private const double reset_end = 3.0; // Total wipe at 3.0s
         private const double sigmoid_x0_kn = 1.4; // Physical difficulty inflection point
         private const double sigmoid_k_kn = 2.5; // Physical sigmoid steepness
-        private const double sigmoid_x0_h = 1.5; // Cognitive difficulty inflection point (UNUSED)
-        private const double sigmoid_k_h = 4.0; // Cognitive sigmoid steepness (UNUSED)
         private const double gamma = 0.70; // Frequency-dependent fatigue factor
+
+        // private const double sigmoid_x0_h = 1.5; // Cognitive difficulty inflection point (UNUSED)
+        // private const double sigmoid_k_h = 4.0; // Cognitive sigmoid steepness (UNUSED)
 
         /// <summary>
         /// Calculates a physical and cognitive multiplier for the rhythmic complexity of the tap associated with historic data of the current <see cref="OsuDifficultyHitObject"/>.
@@ -128,24 +129,24 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             double sigmoidRawKn = 1.0 / (1.0 + Math.Exp(-sigmoid_k_kn * (rawKn - sigmoid_x0_kn)));
             double knMultiplier = 1.0 + (sigmoidRawKn - sigmoidAtZeroKn) / (1.0 - sigmoidAtZeroKn);
 
-            // Cognitive component - proxy for rhythm reading
-            // Straightforward Shannon entropy across scales derived from information theory
-            // This is ignored because log summation gives me hilarious values if applied to tap/speed
-            double totalEnergy = s.RhythmScaleTotalEnergy + 1e-9;
-            double rawH = 0;
-
-            for (int i = 0; i < energies.Length; i++)
-            {
-                double p = energies[i] / totalEnergy;
-                if (p > 1e-4) rawH -= p * Math.Log(p, 2); // Shannon entropy log summation
-            }
-
-            // Normalize h (Max entropy for 6 bins is ~2.58 bits) to [1.0, 2.0]
-            // In practice, with these constants the sigmoid only reaches mults ranging from [1.002, 1.988]
-            // The inflection point is chosen to reflect the fact that effort is only perceived beyond some non-trivial rhythmic complexity
-            double sigmoidAtZeroH = 1.0 / (1.0 + Math.Exp(sigmoid_k_h * sigmoid_x0_h));
-            double sigmoidRawH = 1.0 / (1.0 + Math.Exp(-sigmoid_k_h * (rawH - sigmoid_x0_h)));
-            double hMultiplier = 1.0 + (sigmoidRawH - sigmoidAtZeroH) / (1.0 - sigmoidAtZeroH);
+            // // Cognitive component - proxy for rhythm reading
+            // // Straightforward Shannon entropy across scales derived from information theory
+            // // This is ignored because log summation gives me hilarious values if applied to tap/speed
+            // double totalEnergy = s.RhythmScaleTotalEnergy + 1e-9;
+            // double rawH = 0;
+            //
+            // for (int i = 0; i < energies.Length; i++)
+            // {
+            //     double p = energies[i] / totalEnergy;
+            //     if (p > 1e-4) rawH -= p * Math.Log(p, 2); // Shannon entropy log summation
+            // }
+            //
+            // // Normalize h (Max entropy for 6 bins is ~2.58 bits) to [1.0, 2.0]
+            // // In practice, with these constants the sigmoid only reaches mults ranging from [1.002, 1.988]
+            // // The inflection point is chosen to reflect the fact that effort is only perceived beyond some non-trivial rhythmic complexity
+            // double sigmoidAtZeroH = 1.0 / (1.0 + Math.Exp(sigmoid_k_h * sigmoid_x0_h));
+            // double sigmoidRawH = 1.0 / (1.0 + Math.Exp(-sigmoid_k_h * (rawH - sigmoid_x0_h)));
+            // double hMultiplier = 1.0 + (sigmoidRawH - sigmoidAtZeroH) / (1.0 - sigmoidAtZeroH);
 
             // Final difficulty multiplier will simply be kn since this is being applied only to tap/speed currently
             // Ideally kn and h need to be separately handled
