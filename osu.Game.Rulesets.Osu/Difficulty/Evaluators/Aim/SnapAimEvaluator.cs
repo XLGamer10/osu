@@ -36,12 +36,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             var osuLastObj = (OsuDifficultyHitObject)current.Previous(0);
 
             double currDeltaTime = osuCurrObj.AdjustedDeltaTime;
-            double lastDeltaTime = osuLastObj.AdjustedDeltaTime;
 
             if (withCheesability)
             {
                 currDeltaTime += osuCurrObj.ExtraDeltaTime;
-                lastDeltaTime += osuLastObj.ExtraDeltaTime;
             }
 
             // Calculate the velocity to the current hitobject, which starts with a base distance / time assuming the last object is a hitcircle.
@@ -52,7 +50,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             if (osuLastObj.BaseObject is Slider && withSliderTravelDistance)
             {
                 double sliderDistance = osuLastObj.LazyTravelDistance + osuCurrObj.LazyJumpDistance;
-                currVelocity = Math.Max(currVelocity, sliderDistance / lastDeltaTime);
+                currVelocity = Math.Max(currVelocity, sliderDistance / currDeltaTime);
             }
 
             double wideAngleBonus = 0;

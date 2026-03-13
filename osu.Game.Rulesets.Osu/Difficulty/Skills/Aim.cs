@@ -35,9 +35,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double maxStrain = 0;
         private double currentStrain;
 
-        private double skillMultiplierSnap => 340.0;
-        private double skillMultiplierAngle => 340.0;
-        private double skillMultiplierAgility => 20.5;
+        private double skillMultiplierSnap => 480.0;
+        private double skillMultiplierAgility => 18.5;
         private double skillMultiplierFlow => 1030.0;
         private double skillMultiplierTotal => 1.1;
         private double meanExponent => 1.2;
@@ -58,7 +57,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         {
             double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
 
-            double angleDifficulty = AngleEvaluator.EvaluateDifficultyOf(current, IncludeSliders, WithCheesability) * skillMultiplierAngle;
+            double angleDifficulty = AngleEvaluator.EvaluateDifficultyOf(current, IncludeSliders, WithCheesability) * skillMultiplierSnap;
             double snapDifficulty = SnapAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders, WithCheesability) * skillMultiplierSnap;
             double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current, WithCheesability) * skillMultiplierAgility;
             double flowDifficulty = FlowAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders, WithCheesability) * skillMultiplierFlow;
