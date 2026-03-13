@@ -163,8 +163,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                 loopDifficulty *= DifficultyCalculationUtils.Smootherstep(osuLoopObj.LazyJumpDistance, 15, distance_influence_threshold);
 
                 // Account less for objects close to the max reading window
-                double timeBetweenCurrAndosuLoopObj = osuCurrObj.StartTime - osuLoopObj.StartTime;
-                double timeNerfFactor = getTimeNerfFactor(timeBetweenCurrAndosuLoopObj);
+                double timeBetweenCurrAndLoopObj = osuCurrObj.StartTime - osuLoopObj.StartTime;
+                double timeNerfFactor = getTimeNerfFactor(timeBetweenCurrAndLoopObj);
 
                 loopDifficulty *= timeNerfFactor;
                 pastObjectDifficultyInfluence += loopDifficulty;
@@ -202,8 +202,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                     current.StartTime + hitObject.Preempt < hitObject.StartTime) // Object not visible at the time current object needs to be clicked.
                     break;
 
-                double timeBetweenCurrAndosuLoopObj = hitObject.StartTime - current.StartTime;
-                double timeNerfFactor = getTimeNerfFactor(timeBetweenCurrAndosuLoopObj);
+                double timeBetweenCurrAndLoopObj = hitObject.StartTime - current.StartTime;
+                double timeNerfFactor = getTimeNerfFactor(timeBetweenCurrAndLoopObj);
 
                 visibleObjectCount += hitObject.OpacityAt(current.BaseObject.StartTime, false) * timeNerfFactor;
 

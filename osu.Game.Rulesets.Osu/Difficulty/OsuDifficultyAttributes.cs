@@ -60,9 +60,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         public double SliderFactor { get; set; }
 
         /// <summary>
-        /// Describes how much of the highest aim difficulties are hitcircles or sliders
-        /// A value closer to 0.0 indicates most of the highest aim difficulties are hitcircles
-        /// A value closer to Infinity indicates most of the highest aim difficulties are sliders
+        /// Describes how much of <see cref="AimDifficultStrainCount"/> is contributed to by hitcircles or sliders
+        /// A value closer to 0.0 indicates most of <see cref="AimDifficultStrainCount"/> is contributed by hitcircles
+        /// A value closer to Infinity indicates most of <see cref="AimDifficultStrainCount"/> is contributed by sliders
         /// </summary>
         [JsonProperty("aim_top_weighted_slider_factor")]
         public double AimTopWeightedSliderFactor { get; set; }
@@ -86,14 +86,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         [JsonProperty("inaccuracies_with_cheesing")]
         public double InaccuraciesWithCheesing { get; set; }
 
-        [JsonProperty("aim_penalty_coefficient_a")]
-        public double AimMissPenaltyCoefficientA { get; set; }
-
-        [JsonProperty("aim_penalty_coefficient_b")]
-        public double AimMissPenaltyCoefficientB { get; set; }
-
-        [JsonProperty("aim_penalty_coefficient_c")]
-        public double AimMissPenaltyCoefficientC { get; set; }
+        [JsonProperty("aim_difficult_strain_count")]
+        public double AimDifficultStrainCount { get; set; }
 
         [JsonProperty("speed_difficult_strain_count")]
         public double SpeedDifficultStrainCount { get; set; }
@@ -141,6 +135,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             yield return (ATTRIB_ID_SLIDER_FACTOR, SliderFactor);
             yield return (ATTRIB_ID_CHEESE_FACTOR, CheeseFactor);
 
+            yield return (ATTRIB_ID_AIM_DIFFICULT_STRAIN_COUNT, AimDifficultStrainCount);
             yield return (ATTRIB_ID_SPEED_DIFFICULT_STRAIN_COUNT, SpeedDifficultStrainCount);
             yield return (ATTRIB_ID_SPEED_NOTE_COUNT, SpeedNoteCount);
             yield return (ATTRIB_ID_AIM_DIFFICULT_SLIDER_COUNT, AimDifficultSliderCount);
@@ -164,6 +159,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             SliderFactor = values[ATTRIB_ID_SLIDER_FACTOR];
             CheeseFactor = values[ATTRIB_ID_CHEESE_FACTOR];
             InaccuraciesWithCheesing = values[ATTRIB_ID_INACCURACIES_WITH_CHEESING];
+            AimDifficultStrainCount = values[ATTRIB_ID_AIM_DIFFICULT_STRAIN_COUNT];
             SpeedDifficultStrainCount = values[ATTRIB_ID_SPEED_DIFFICULT_STRAIN_COUNT];
             SpeedNoteCount = values[ATTRIB_ID_SPEED_NOTE_COUNT];
             AimDifficultSliderCount = values[ATTRIB_ID_AIM_DIFFICULT_SLIDER_COUNT];

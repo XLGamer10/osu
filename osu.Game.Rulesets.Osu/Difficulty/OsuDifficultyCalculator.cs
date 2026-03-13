@@ -65,7 +65,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double readingDifficultyValue = reading.DifficultyValue();
             double cheesedReadingDifficultyValue = readingCheesed.DifficultyValue();
 
-            double[] aimMissPenaltyCoefficients = aim.GetMissPenaltyCoefficients();
+            double aimDifficultStrainCount = aim.CountTopWeightedStrains(aimDifficultyValue);
             double speedDifficultStrainCount = speed.CountTopWeightedObjectDifficulties(speedDifficultyValue);
             double readingDifficultNoteCount = reading.CountTopWeightedObjectDifficulties(readingDifficultyValue);
 
@@ -139,9 +139,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 SliderFactor = sliderFactor,
                 CheeseFactor = cheeseFactor,
                 InaccuraciesWithCheesing = greatsWithCheesing,
-                AimMissPenaltyCoefficientA = aimMissPenaltyCoefficients.ElementAtOrDefault(0),
-                AimMissPenaltyCoefficientB = aimMissPenaltyCoefficients.ElementAtOrDefault(1),
-                AimMissPenaltyCoefficientC = aimMissPenaltyCoefficients.ElementAtOrDefault(2),
+                AimDifficultStrainCount = aimDifficultStrainCount,
                 SpeedDifficultStrainCount = speedDifficultStrainCount,
                 ReadingDifficultNoteCount = readingDifficultNoteCount,
                 AimTopWeightedSliderFactor = aimTopWeightedSliderFactor,
