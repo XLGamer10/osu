@@ -141,15 +141,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         }
 
         public double CountTopWeightedSliders(double difficultyValue)
-
+        {
             if (sliderStrains.Count == 0)
                 return 0;
+
             double consistentTopStrain = difficultyValue / 10; // What would the top strain be if all strain values were identical
             if (consistentTopStrain == 0)
                 return 0;
             // Use a weighted sum of all strains. Constants are arbitrary and give nice values
             return sliderStrains.Sum(s => DifficultyCalculationUtils.Logistic(s / consistentTopStrain, 0.88, 10, 1.1));
         }
+
         public double GetInaccuraciesWithCheesing() => maxStrain > 0 ? inaccuraciesWhileCheesing / maxStrain : 0;
 
         // Check if cheesing the current object still results in a great.
