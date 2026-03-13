@@ -16,7 +16,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
         /// <summary>
         /// Evaluates the difficulty of fast aiming
         /// </summary>
-        public static double EvaluateDifficultyOf(DifficultyHitObject current)
+        public static double EvaluateDifficultyOf(DifficultyHitObject current, bool withCheesability)
         {
             if (current.BaseObject is Spinner)
                 return 0;
@@ -24,14 +24,21 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             var osuCurrObj = (OsuDifficultyHitObject)current;
             var osuPrevObj = current.Index > 0 ? (OsuDifficultyHitObject)current.Previous(0) : null;
 
+            double currDeltaTime = osuCurrObj.AdjustedDeltaTime;
+
+            if (withCheesability)
+            {
+                currDeltaTime += osuCurrObj.ExtraDeltaTime;
+            }
+
             double travelDistance = osuPrevObj?.LazyTravelDistance ?? 0;
             double distance = travelDistance + osuCurrObj.LazyJumpDistance;
 
             double distanceScaled = Math.Min(distance, distance_cap) / distance_cap;
 
-            double strain = distanceScaled * 1000 / osuCurrObj.AdjustedDeltaTime;
+            double strain = distanceScaled * 1000 / currDeltaTime;
 
-            strain *= highBpmBonus(osuCurrObj.AdjustedDeltaTime);
+            strain *= highBpmBonus(currDeltaTime);
 
             return strain * DifficultyCalculationUtils.Smootherstep(distance, 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
         }

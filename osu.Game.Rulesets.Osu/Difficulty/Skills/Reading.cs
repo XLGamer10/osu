@@ -19,11 +19,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private readonly List<DifficultyHitObject> objectList = new List<DifficultyHitObject>();
 
         private readonly bool hasHiddenMod;
+        public readonly bool WithCheesability;
 
-        public Reading(Mod[] mods)
+        public Reading(Mod[] mods, bool withCheesability)
             : base(mods)
         {
             hasHiddenMod = mods.OfType<OsuModHidden>().Any(m => !m.OnlyFadeApproachCircles.Value);
+            WithCheesability = withCheesability;
         }
 
         private double currentDifficulty;
@@ -39,7 +41,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             currentDifficulty *= strainDecay(current.DeltaTime);
 
-            currentDifficulty += ReadingEvaluator.EvaluateDifficultyOf(current, hasHiddenMod) * skillMultiplier;
+            currentDifficulty += ReadingEvaluator.EvaluateDifficultyOf(current, hasHiddenMod, WithCheesability) * skillMultiplier;
 
             return currentDifficulty;
         }

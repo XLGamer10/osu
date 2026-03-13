@@ -35,15 +35,24 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             var osuCurrObj = (OsuDifficultyHitObject)current;
             var osuLastObj = (OsuDifficultyHitObject)current.Previous(0);
 
+            double currDeltaTime = osuCurrObj.AdjustedDeltaTime;
+            double lastDeltaTime = osuLastObj.AdjustedDeltaTime;
+
+            if (withCheesability)
+            {
+                currDeltaTime += osuCurrObj.ExtraDeltaTime;
+                lastDeltaTime += osuLastObj.ExtraDeltaTime;
+            }
+
             // Calculate the velocity to the current hitobject, which starts with a base distance / time assuming the last object is a hitcircle.
             double currDistance = withSliderTravelDistance ? osuCurrObj.LazyJumpDistance : osuCurrObj.JumpDistance;
-            double currVelocity = currDistance / osuCurrObj.AdjustedDeltaTime;
+            double currVelocity = currDistance / currDeltaTime;
 
             // But if the last object is a slider, then we extend the travel velocity through the slider into the current object.
             if (osuLastObj.BaseObject is Slider && withSliderTravelDistance)
             {
                 double sliderDistance = osuLastObj.LazyTravelDistance + osuCurrObj.LazyJumpDistance;
-                currVelocity = Math.Max(currVelocity, sliderDistance / osuCurrObj.AdjustedDeltaTime);
+                currVelocity = Math.Max(currVelocity, sliderDistance / lastDeltaTime);
             }
 
             double wideAngleBonus = 0;
