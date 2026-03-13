@@ -31,8 +31,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             WithCheesability = withCheesability;
         }
 
-        private double inaccuraciesWhileCheesing = 0;
-        private double maxStrain = 0;
+        private double inaccuraciesWhileCheesing;
+        private double maxStrain;
         private double currentStrain;
 
         private double skillMultiplierSnap => 480.0;
@@ -113,7 +113,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         // P(snap) = f(snap/flow), P(flow) = f(flow/snap) (ie snap and flow are symmetric and reversible)
         // Therefore: f(x) + f(1/x) = 1
         // 0 <= f(x) <= 1 (cannot have negative or greater than 100% probability of snapping or flowing)
-        // This logistic function is a solution, which fits nicely with the general idea of interpolation and provides a tuneable constant
+        // This logistic function is a solution, which fits nicely with the general idea of interpolation and provides a tunable constant
         private static double calculateSnapFlowProbability(double ratio)
         {
             const double k = 7.27;
