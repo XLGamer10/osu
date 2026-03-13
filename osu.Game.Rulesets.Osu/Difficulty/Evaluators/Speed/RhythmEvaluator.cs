@@ -11,15 +11,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 {
     public static class RhythmEvaluator
     {
-        private const double tau_0 = 0.180; // 180ms base IIR constant
-        private const double reset_start = 1.5; // Memory wipe starts at 1.5s
-        private const double reset_end = 3.0; // Total wipe at 3.0s
-        private const double sigmoid_x0_kn = 1.4; // Physical difficulty inflection point
-        private const double sigmoid_k_kn = 2.5; // Physical sigmoid steepness
+        private const double tau_0 = 0.160; // 160ms base IIR constant
+        private const double reset_end = 3.0; // Total memory wipe always occurs after a 3.0s break
+        private const double sigmoid_x0_kn = 1.0; // Physical difficulty inflection point
+        private const double sigmoid_k_kn = 2.0; // Physical sigmoid steepness
         private const double gamma = 0.70; // Frequency-dependent fatigue factor
-
-        // private const double sigmoid_x0_h = 1.5; // Cognitive difficulty inflection point (UNUSED)
-        // private const double sigmoid_k_h = 4.0; // Cognitive sigmoid steepness (UNUSED)
 
         /// <summary>
         /// Calculates a physical and cognitive multiplier for the rhythmic complexity of the tap associated with historic data of the current <see cref="OsuDifficultyHitObject"/>.
@@ -39,19 +35,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             double dt = current.DeltaTime / 1000.0;
             double epsilon = currentOsu.HitWindow(HitResult.Great) * 0.3 / 1000.0;
 
-            // If enough time has passed since the last hit object, clear the rhythm state entirely (0.0)
-            // Main method of avoiding complexity spikes due to breaks
-            // Otherwise, decay the energy exponentially since last hit object, and accelerate the decay if between 1.5 and 3.0s (smoothing clearing of rhythm state)
+            // Decay the energy exponentially since last hit object, and accelerate the decay if between 1.5 and 3.0s (smoothing clearing of rhythm state)
             // This is the principle of an IIR filter / leaky integrator, and can be thought of as a series of "rhythm strains"
-            if (dt > reset_end)
-            {
-                state.ClearRhythmState();
-            }
-            else
-            {
-                double alpha = Math.Clamp((dt - reset_start) / (reset_end - reset_start), 0, 1);
-                state.ApplyDecay(dt, tau_0, 1 - alpha);
-            }
+            state.ApplyDecay(dt, tau_0);
 
             // For 6 different rhythm scales, ranging from finest to coarsest:
             for (int i = 0; i < 6; i++)
@@ -81,27 +67,47 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
                 // Denoise gate - prevent minor redline or BPM changes from being overvalued
                 double denoiseGate = (rawDiff * rawDiff) / (rawDiff * rawDiff + epsilon * epsilon);
 
-                // Ratio gate - empirically buff weird rhythm energy and nerf energies of power-of-two rhythms
+                // Ratio gate - empirically buff energies of weird rhythms and nerf energies of power-of-two rhythms
                 // This is some "magic" that can't be eliminated yet, but *partially* mitigates start-stop streams being overvalued
                 double ratio = dt / (avgInterval + 1e-6);
                 double ratioWeight = getEffectiveRatio(ratio);
-                if (ratio > 4.5) ratioWeight = 0.01; // This apparently nerfs buzzsliders into stamina streams
-                double surprise = Math.Sqrt(Math.Abs(normDiff * denoiseGate * antiMashGate)) * ratioWeight;
 
-                // Cap the max possible surprise to 1 and scale with the previously computed DeltaTime
-                double tau = tau_0 * lookback;
-                double energyAdd = surprise * (1.0 - Math.Exp(-dt / tau));
+                if (ratio is > 4.5 or < 1.0 / 4.5)
+                {
+                    // Reset the scale's energy completely if the ratio is large enough: can be reasonably considered a separate rhythmic phrase
+                    state.ResetScale(i);
+                }
+                else
+                {
+                    double surprise = Math.Abs(normDiff * denoiseGate * antiMashGate) * ratioWeight;
 
-                // Preserved legacy nerfs
-                if (currentOsu.BaseObject is Slider) energyAdd *= 0.5; // Into slider nerf
-                if (previousOsu?.BaseObject is Slider) energyAdd *= 0.3; // From slider nerf
+                    // Calculate how 'stable' the finest scale is
+                    double localRatio = dt / (currentOsu.Previous(0).DeltaTime / 1000.0 + 1e-6);
+                    double localStability = Math.Exp(-Math.Abs(localRatio - 1.0) * 2.0);
 
-                // Doubletap nerf scaling at the post-processing level - does something different from the anti-mash gate
-                double doubletapness = previousOsu?.GetDoubletapness(currentOsu) ?? 0;
-                energyAdd *= 1.0 - doubletapness * 0.75;
+                    // For coarse scales (i >= 2), if the local rhythm is stable
+                    // reduce the surprise reward of the macro-rhythm
+                    // This has the effect of mildly nerfing some repetitive patterns such as repeated triples
+                    if (i >= 2)
+                    {
+                        double stabilityInhibition = Math.Pow(1.0 - localStability, 2);
+                        surprise *= stabilityInhibition;
+                    }
 
-                // Accumulate state
-                state.AddEnergy(i, energyAdd);
+                    // Cap the max possible surprise to 1 and scale with the previously computed DeltaTime
+                    double tau = tau_0 * lookback;
+                    double energyAdd = surprise * (1.0 - Math.Exp(-dt / tau));
+
+                    // Preserved legacy nerfs
+                    if (currentOsu.BaseObject is Slider) energyAdd *= 0.5; // Into slider nerf
+                    if (previousOsu?.BaseObject is Slider) energyAdd *= 0.3; // From slider nerf
+
+                    // Doubletap nerf scaling at the post-processing level - does something different from the anti-mash gate
+                    double doubletapness = previousOsu?.GetDoubletapness(currentOsu) ?? 0;
+                    energyAdd *= 1.0 - doubletapness * 0.75;
+
+                    state.AddEnergy(i, energyAdd);
+                }
             }
 
             // Final state storage and metric calculation
@@ -129,59 +135,46 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             double sigmoidRawKn = 1.0 / (1.0 + Math.Exp(-sigmoid_k_kn * (rawKn - sigmoid_x0_kn)));
             double knMultiplier = 1.0 + (sigmoidRawKn - sigmoidAtZeroKn) / (1.0 - sigmoidAtZeroKn);
 
-            // // Cognitive component - proxy for rhythm reading
-            // // Straightforward Shannon entropy across scales derived from information theory
-            // // This is ignored because log summation gives me hilarious values if applied to tap/speed
-            // double totalEnergy = s.RhythmScaleTotalEnergy + 1e-9;
-            // double rawH = 0;
-            //
-            // for (int i = 0; i < energies.Length; i++)
-            // {
-            //     double p = energies[i] / totalEnergy;
-            //     if (p > 1e-4) rawH -= p * Math.Log(p, 2); // Shannon entropy log summation
-            // }
-            //
-            // // Normalize h (Max entropy for 6 bins is ~2.58 bits) to [1.0, 2.0]
-            // // In practice, with these constants the sigmoid only reaches mults ranging from [1.002, 1.988]
-            // // The inflection point is chosen to reflect the fact that effort is only perceived beyond some non-trivial rhythmic complexity
-            // double sigmoidAtZeroH = 1.0 / (1.0 + Math.Exp(sigmoid_k_h * sigmoid_x0_h));
-            // double sigmoidRawH = 1.0 / (1.0 + Math.Exp(-sigmoid_k_h * (rawH - sigmoid_x0_h)));
-            // double hMultiplier = 1.0 + (sigmoidRawH - sigmoidAtZeroH) / (1.0 - sigmoidAtZeroH);
-
-            // Final difficulty multiplier will simply be kn since this is being applied only to tap/speed currently
-            // Ideally kn and h need to be separately handled
-            // Returns a value [1.0, 2.0]
             return knMultiplier;
         }
 
         private static double getEffectiveRatio(double ratio)
         {
             // High baseline: everything is hard unless it's a known simple ratio
-            const double base_complexity = 2.0;
+            const double base_complexity = 2.2;
 
+            // Nerf specific intervals depending on how regular they are
             var nerfs = new[]
             {
-                (1.0, 0.01, 0.04),
-                (2.0, 0.05, 0.06),
-                (1.0 / 2.0, 0.02, 0.04),
-                (4.0, 0.00, 0.10),
-                (1.0 / 4.0, 0.01, 0.04),
-                (3.0, 0.25, 0.08),
-                (1.0 / 3.0, 0.25, 0.08),
+                (1.0, 0.05, 0.02),
+                (2.0, 0.15, 0.04),
+                (1.0 / 2.0, 0.50, 0.02),
+                (4.0, 0.10, 0.05),
+                (1.0 / 4.0, 0.30, 0.02),
             };
 
             double minMultiplier = base_complexity;
+
+            if (ratio > 2.5)
+            {
+                // As the ratio moves further from 2.5, the "base complexity"
+                // should naturally taper off because it is more likely to be perceived as a separate rhythmic phrase
+                minMultiplier *= Math.Exp(-(ratio - 1.0) * 0.75);
+            }
+
+            double finalMultiplier = minMultiplier;
 
             foreach ((double anchor, double target, double width) in nerfs)
             {
                 // If we are near a simple multiple, pull the complexity down
                 // An alternative to linearly interpolating from arrays is Gaussian windows
                 double dist = ratio - anchor;
-                double factor = Math.Exp(-(dist * dist) / (2 * width * width));
-                minMultiplier = Math.Min(minMultiplier, Math.Max(target, base_complexity * (1 - factor)));
+                double inverseDoubleWidthSquared = 1.0 / (2.0 * width * width);
+                double factor = Math.Exp(-(dist * dist) * inverseDoubleWidthSquared);
+                finalMultiplier = Math.Min(finalMultiplier, Math.Max(target, base_complexity * (1 - factor)));
             }
 
-            return minMultiplier;
+            return finalMultiplier;
         }
     }
 }
