@@ -3,7 +3,7 @@
 
 using System;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
-using osu.Game.Rulesets.Difficulty.Utils;
+// using osu.Game.Rulesets.Difficulty.Utils;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Scoring;
@@ -12,16 +12,20 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 {
     public static class RhythmEvaluator
     {
-        private const double min_speed_bonus = 200; // Should be identical to the value in SpeedEvaluator for now
-        private const double jerk_balancing_factor = 0.020; // Increase this value to make things more based
+        private const double jerk_balancing_factor = 0.040; // Increase this value to make things more based
         private const double jerk_time_constant = 400.0; // 400ms
         private const double resonance_factor = 1.0; // Keep neutral, but worth tuning perhaps?
-        private const double tc_exponent = 0.5;
+        private const double compression_exponent = 0.86; // Reflects the nonlinear perception of effort, more relevant at higher BPMs
+
+        // Unused for now since I can't seem to find use for these, maybe some other time?
+        // private const double min_speed_bonus = 200; // Should be identical to the value in SpeedEvaluator for now
+        // private const double tc_exponent = 0.5;
 
         /// <summary>
         /// Calculates a rhythm multiplier for the difficulty of the tap associated with historic rhythmic interval data of the current <see cref="OsuDifficultyHitObject"/>.
         /// Additionally, uses jerk (derivative of acceleration/force) to model muscle confusion, which is defined here as the derivative of Speed values for the object.
         /// Note that this specifically does NOT model cognitive difficulty and is a very "1st-order" measurement of physical finger control.
+        /// </summary>
         public static double EvaluateDifficultyOf(DifficultyHitObject current)
         {
             if (current.BaseObject is Spinner)
@@ -30,20 +34,20 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             var osuCurrObj = (OsuDifficultyHitObject)current;
             var osuPrevObj = (OsuDifficultyHitObject?)current.Previous(0);
 
-            double strainTime = osuCurrObj.AdjustedDeltaTime;
+            // double strainTime = osuCurrObj.AdjustedDeltaTime;
             double nextDoubletapness = osuCurrObj.GetDoubletapness((OsuDifficultyHitObject?)osuCurrObj.Next(0));
             double prevDoubletapness = osuPrevObj?.GetDoubletapness(osuCurrObj) ?? 0;
             double doubletapness = 1.0 - Math.Max(nextDoubletapness, prevDoubletapness); // This is done because for doubletaps, extreme jerk appears BEFORE the note with high doubletapness
             double epsilon = current.HitWindow(HitResult.Great) * 0.4;
 
             // Copied strain time code from SpeedEvaluator
-            strainTime /= Math.Clamp((strainTime / osuCurrObj.HitWindow(HitResult.Great)) / 0.93, 0.92, 1);
+            // strainTime /= Math.Clamp((strainTime / osuCurrObj.HitWindow(HitResult.Great)) / 0.93, 0.92, 1);
 
             // Dynamically vary the time constant / decay speed based on BPM, we don't want to excessively buff finger control at high end where raw speed typically dominates
             // This partially counteracts the "double-counting of jerk / muscle confusion"
             // tc_exponent makes this anti double-counting harsher or softer
-            double scaledTimeConstant = jerk_time_constant * Math.Pow(strainTime / DifficultyCalculationUtils.BPMToMilliseconds(min_speed_bonus), tc_exponent);
-            osuCurrObj.History.Decay(osuCurrObj.AdjustedDeltaTime, scaledTimeConstant);
+            // double scaledTimeConstant = jerk_time_constant * Math.Pow(strainTime / DifficultyCalculationUtils.BPMToMilliseconds(min_speed_bonus), tc_exponent);
+            osuCurrObj.History.Decay(osuCurrObj.AdjustedDeltaTime, jerk_time_constant);
 
             // Do not calculate a jerk if there is no previous note
             if (osuPrevObj == null) return 0;
@@ -72,7 +76,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             if (dt < epsilon) return 0;
 
             double deltaPower = currentPower - prevPower;
-            double jerk = deltaPower / ((dt + epsilon) / 1000.0); // Smooth with epsilon
+            double compressedDelta = Math.Sign(deltaPower) * Math.Pow(Math.Abs(deltaPower), compression_exponent);
+            double jerk = compressedDelta / ((dt + epsilon) / 1000.0); // Smooth with epsilon
 
             if (jerk < 0)
             {
@@ -119,7 +124,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
         // e.g. since triples are period-4 (smallest prime factor is 2), they will likely be nerfed more than weirder periods (e.g. 1/7)
         private static double resonanceSieve(OsuDifficultyHitObject current, double currentRatio)
         {
-            const double ratio_tolerance = 0.15; // How close should two rhythmic intervals be in order to be considered "the same"
+            const double ratio_tolerance = 0.09; // How close should two rhythmic intervals be in order to be considered "the same"
             const double gallop_midpoint = 37.0; // 37ms - arbitrarily chosen midpoint representing the time between two notes in a gallop
 
             double totalResonance = 0;
