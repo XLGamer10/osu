@@ -2,8 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Utils;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
@@ -14,235 +12,144 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 {
     public static class RhythmEvaluator
     {
-        private const int history_time_max = 5 * 1000; // 5 seconds
-        private const int history_objects_max = 32;
-        private const double rhythm_overall_multiplier = 0.8;
-        private const double rhythm_ratio_multiplier = 32.0;
+        private const double min_speed_bonus = 200; // Should be identical to the value in SpeedEvaluator for now
+        private const double jerk_balancing_factor = 0.020; // Increase this value to make things more based
+        private const double jerk_time_constant = 400.0; // 400ms
+        private const double resonance_factor = 1.0; // Keep neutral, but worth tuning perhaps?
+        private const double tc_exponent = 0.5;
 
         /// <summary>
-        /// Calculates a rhythm multiplier for the difficulty of the tap associated with historic data of the current <see cref="OsuDifficultyHitObject"/>.
-        /// </summary>
+        /// Calculates a rhythm multiplier for the difficulty of the tap associated with historic rhythmic interval data of the current <see cref="OsuDifficultyHitObject"/>.
+        /// Additionally, uses jerk (derivative of acceleration/force) to model muscle confusion, which is defined here as the derivative of Speed values for the object.
+        /// Note that this specifically does NOT model cognitive difficulty and is a very "1st-order" measurement of physical finger control.
         public static double EvaluateDifficultyOf(DifficultyHitObject current)
         {
             if (current.BaseObject is Spinner)
                 return 0;
 
-            double rhythmComplexitySum = 0;
+            var osuCurrObj = (OsuDifficultyHitObject)current;
+            var osuPrevObj = (OsuDifficultyHitObject?)current.Previous(0);
 
-            double deltaDifferenceEpsilon = ((OsuDifficultyHitObject)current).HitWindow(HitResult.Great) * 0.3;
+            double strainTime = osuCurrObj.AdjustedDeltaTime;
+            double nextDoubletapness = osuCurrObj.GetDoubletapness((OsuDifficultyHitObject?)osuCurrObj.Next(0));
+            double prevDoubletapness = osuPrevObj?.GetDoubletapness(osuCurrObj) ?? 0;
+            double doubletapness = 1.0 - Math.Max(nextDoubletapness, prevDoubletapness); // This is done because for doubletaps, extreme jerk appears BEFORE the note with high doubletapness
+            double epsilon = current.HitWindow(HitResult.Great) * 0.4;
 
-            var island = new Island(deltaDifferenceEpsilon);
-            var previousIsland = new Island(deltaDifferenceEpsilon);
+            // Copied strain time code from SpeedEvaluator
+            strainTime /= Math.Clamp((strainTime / osuCurrObj.HitWindow(HitResult.Great)) / 0.93, 0.92, 1);
 
-            // we can't use dictionary here because we need to compare island with a tolerance
-            // which is impossible to pass into the hash comparer
-            var islandCounts = new List<(Island Island, int Count)>();
+            // Dynamically vary the time constant / decay speed based on BPM, we don't want to excessively buff finger control at high end where raw speed typically dominates
+            // This partially counteracts the "double-counting of jerk / muscle confusion"
+            // tc_exponent makes this anti double-counting harsher or softer
+            double scaledTimeConstant = jerk_time_constant * Math.Pow(strainTime / DifficultyCalculationUtils.BPMToMilliseconds(min_speed_bonus), tc_exponent);
+            osuCurrObj.History.Decay(osuCurrObj.AdjustedDeltaTime, scaledTimeConstant);
 
-            double startRatio = 0; // store the ratio of the current start of an island to buff for tighter rhythms
+            // Do not calculate a jerk if there is no previous note
+            if (osuPrevObj == null) return 0;
 
-            bool firstDeltaSwitch = false;
+            // Calculate the jerk of the required motion based off of current and previous speed difficulty, scaled by DeltaTime
 
-            int historicalNoteCount = Math.Min(current.Index, history_objects_max);
+            double rawJerk = calculateJerk(osuCurrObj.History.BasePower, osuPrevObj.History.BasePower, osuCurrObj.AdjustedDeltaTime, epsilon, osuPrevObj.BaseObject is Slider);
+            // Multiply by a resonance factor
+            // Catch-all nerf for repetitive patterns which players can optimize, minimizing the jerk of the required motion
+            double currentRatio = osuCurrObj.AdjustedDeltaTime / osuPrevObj.AdjustedDeltaTime;
+            double resonanceMultiplier = resonanceSieve(osuCurrObj, currentRatio);
+            double jerkDifficulty = rawJerk * resonanceMultiplier;
 
-            int rhythmStart = 0;
+            // Add the jerk strain to the rhythm history
+            osuCurrObj.History.JerkStrain += jerkDifficulty * doubletapness;
 
-            while (rhythmStart < historicalNoteCount - 2 && current.StartTime - current.Previous(rhythmStart).StartTime < history_time_max)
-                rhythmStart++;
+            // Calculate the current ratio and save both the ratio and the speed difficulty (power) to the rhythm history
+            osuCurrObj.History.Push(currentRatio, osuCurrObj.History.BasePower);
 
-            OsuDifficultyHitObject prevObj = (OsuDifficultyHitObject)current.Previous(rhythmStart);
-            OsuDifficultyHitObject lastObj = (OsuDifficultyHitObject)current.Previous(rhythmStart + 1);
-
-            // we go from the furthest object back to the current one
-            for (int i = rhythmStart; i > 0; i--)
-            {
-                OsuDifficultyHitObject currObj = (OsuDifficultyHitObject)current.Previous(i - 1);
-                if (currObj.BaseObject is Spinner)
-                    continue;
-
-                // scales note 0 to 1 from history to now
-                double timeDecay = (history_time_max - (current.StartTime - currObj.StartTime)) / history_time_max;
-                double noteDecay = (double)(historicalNoteCount - i) / historicalNoteCount;
-
-                double currHistoricalDecay = Math.Min(noteDecay, timeDecay); // either we're limited by time or limited by object count.
-
-                // Use custom cap value to ensure that at this point delta time is actually zero
-                double currDelta = Math.Max(currObj.DeltaTime, 1e-7);
-                double prevDelta = Math.Max(prevObj.DeltaTime, 1e-7);
-                double lastDelta = Math.Max(lastObj.DeltaTime, 1e-7);
-
-                // calculate how much current delta difference deserves a rhythm bonus
-                // this function is meant to reduce rhythm bonus for deltas that are multiples of each other (i.e 100 and 200)
-                double deltaDifference = Math.Max(prevDelta, currDelta) / Math.Min(prevDelta, currDelta);
-
-                // reduce ratio bonus if delta difference is too big
-                double differenceMultiplier = Math.Clamp(2.0 - deltaDifference / 8.0, 0.0, 1.0);
-
-                double windowPenalty = Math.Min(1, Math.Max(0, Math.Abs(prevDelta - currDelta) - deltaDifferenceEpsilon) / deltaDifferenceEpsilon);
-
-                double effectiveRatio = getEffectiveRatio(deltaDifference) * windowPenalty * differenceMultiplier;
-
-                // if previous object is a slider it might be easier to tap since you don't have to do a whole tapping motion
-                // while a full deltatime might end up some weird ratio the "unpress->tap" motion might be simple
-                // for example a slider-circle-circle pattern should be evaluated as a regular triple and not as a single->double
-                if (prevObj.BaseObject is Slider)
-                {
-                    double sliderLazyEndDelta = currObj.MinimumJumpTime;
-                    double sliderLazyDeltaDifference = Math.Max(sliderLazyEndDelta, currDelta) / Math.Min(sliderLazyEndDelta, currDelta);
-
-                    double sliderRealEndDelta = currObj.LastObjectEndDeltaTime;
-                    double sliderRealDeltaDifference = Math.Max(sliderRealEndDelta, currDelta) / Math.Min(sliderRealEndDelta, currDelta);
-
-                    double sliderEffectiveRatio = Math.Min(getEffectiveRatio(sliderLazyDeltaDifference), getEffectiveRatio(sliderRealDeltaDifference));
-                    effectiveRatio = Math.Min(sliderEffectiveRatio, effectiveRatio);
-                }
-
-                if (firstDeltaSwitch)
-                {
-                    if (Math.Abs(prevDelta - currDelta) < deltaDifferenceEpsilon)
-                    {
-                        // island is still progressing
-                        island.AddDelta((int)currDelta);
-                    }
-                    else
-                    {
-                        // bpm change is into slider, this is easy acc window
-                        if (currObj.BaseObject is Slider)
-                            effectiveRatio *= 0.5;
-
-                        // repeated island polarity (2 -> 4, 3 -> 5)
-                        if (island.IsSimilarPolarity(previousIsland))
-                            effectiveRatio *= 0.5;
-
-                        // previous increase happened a note ago, 1/1->1/2-1/4, dont want to buff this.
-                        if (lastDelta > prevDelta + deltaDifferenceEpsilon && prevDelta > currDelta + deltaDifferenceEpsilon)
-                            effectiveRatio *= 0.125;
-
-                        // repeated island size (ex: triplet -> triplet)
-                        // TODO: remove this nerf since its staying here only for balancing purposes because of the flawed ratio calculation
-                        if (previousIsland.DeltaCount == island.DeltaCount)
-                            effectiveRatio *= 0.5;
-
-                        var islandCount = islandCounts.FirstOrDefault(x => x.Island.Equals(island));
-
-                        if (islandCount != default)
-                        {
-                            int countIndex = islandCounts.IndexOf(islandCount);
-
-                            // only add island to island counts if they're going one after another
-                            if (previousIsland.Equals(island))
-                                islandCount.Count++;
-
-                            // repeated island (ex: triplet -> triplet)
-                            double power = DifficultyCalculationUtils.Logistic(island.Delta, maxValue: 2.75, multiplier: 0.24, midpointOffset: 58.33);
-                            effectiveRatio *= Math.Min(3.0 / islandCount.Count, Math.Pow(1.0 / islandCount.Count, power));
-
-                            islandCounts[countIndex] = (islandCount.Island, islandCount.Count);
-                        }
-                        else
-                        {
-                            islandCounts.Add((island, 1));
-                        }
-
-                        // scale down the difficulty if the object is doubletappable
-                        double doubletapness = prevObj.GetDoubletapness(currObj);
-                        effectiveRatio *= 1 - doubletapness * 0.75;
-
-                        rhythmComplexitySum += Math.Sqrt(effectiveRatio * startRatio) * currHistoricalDecay;
-
-                        startRatio = effectiveRatio;
-
-                        previousIsland = island;
-
-                        if (prevDelta + deltaDifferenceEpsilon < currDelta) // we're slowing down, stop counting
-                            firstDeltaSwitch = false; // if we're speeding up, this stays true and we keep counting island size.
-
-                        island = new Island((int)currDelta, deltaDifferenceEpsilon);
-                    }
-                }
-                else if (prevDelta > currDelta + deltaDifferenceEpsilon) // we're speeding up
-                {
-                    // Begin counting island until we change speed again.
-                    firstDeltaSwitch = true;
-
-                    // bpm change is into slider, this is easy acc window
-                    if (currObj.BaseObject is Slider)
-                        effectiveRatio *= 0.6;
-
-                    // bpm change was from a slider, this is easier typically than circle -> circle
-                    // unintentional side effect is that bursts with kicksliders at the ends might have lower difficulty than bursts without sliders
-                    if (prevObj.BaseObject is Slider)
-                        effectiveRatio *= 0.6;
-
-                    startRatio = effectiveRatio;
-
-                    island = new Island((int)currDelta, deltaDifferenceEpsilon);
-                }
-
-                lastObj = prevObj;
-                prevObj = currObj;
-            }
-
-            return Math.Sqrt(4 + rhythmComplexitySum * rhythm_overall_multiplier) / 2.0; // produces multiplier that can be applied to strain. range [1, infinity) (not really though);
+            return (osuCurrObj.History.JerkStrain * jerk_balancing_factor) * doubletapness;
         }
 
-        private static double getEffectiveRatio(double deltaDifference)
+        private static double calculateJerk(double currentPower, double prevPower, double dt, double epsilon, bool fromSlider)
         {
-            // Take only the fractional part of the value since we're only interested in punishing multiples
-            double deltaDifferenceFraction = deltaDifference - Math.Truncate(deltaDifference);
+            // If the pattern is unambiguously doubletappable, assume its jerk to be 0
+            if (dt < epsilon) return 0;
 
-            return 1.0 + rhythm_ratio_multiplier * Math.Min(0.5, DifficultyCalculationUtils.SmoothstepBellCurve(deltaDifferenceFraction));
+            double deltaPower = currentPower - prevPower;
+            double jerk = deltaPower / ((dt + epsilon) / 1000.0); // Smooth with epsilon
+
+            if (jerk < 0)
+            {
+                // Slowdowns are mildly harder to execute than speedups (subject to debate, I think)
+                return Math.Abs(jerk) * 1.25;
+            }
+
+            if (fromSlider)
+            {
+                // If the last object was a slider, this is typically a much easier transition
+                return Math.Abs(jerk) * 0.6;
+            }
+
+            return Math.Abs(jerk);
         }
 
-        private class Island : IEquatable<Island>
+        // Array containing the smallest prime factors of integers 0 through 17
+        // Patterns can be thought of as having specific periods
+        // ex. triples are period-4 (XXX-XXX-XXX-...), swing is period-3 (XX-XX-XX-XX-...)
+        // This is used to nerf resonances that represent "less prime" note counts
+        private static readonly int[] smallest_prime_factors =
         {
-            private readonly double deltaDifferenceEpsilon;
+            0, // 0: N/A
+            1, // 1: N/A
+            2, // 2: Stream (p=1)
+            3, // 3: Swing   (p=2)
+            2, // 4: Triple  (p=3)
+            5, // 5: Quad    (p=4)
+            2, // 6: 5-Burst (p=5) -> SPF of 6 is 2
+            7, // 7: 6-Burst (p=6)
+            2, // 8: 7-Burst (p=7) -> SPF of 8 is 2
+            3, // 9: etc.
+            2, // 10
+            11, // 11
+            2, // 12
+            13, // 13
+            2, // 14
+            3, // 15
+            2, // 16
+            17 // 17
+        };
 
-            public Island(double epsilon)
+        // Function that calculates how resonant a pattern is by penalizing same rhythmic intervals occurring at smaller prime note intervals
+        // e.g. since triples are period-4 (smallest prime factor is 2), they will likely be nerfed more than weirder periods (e.g. 1/7)
+        private static double resonanceSieve(OsuDifficultyHitObject current, double currentRatio)
+        {
+            const double ratio_tolerance = 0.15; // How close should two rhythmic intervals be in order to be considered "the same"
+            const double gallop_midpoint = 37.0; // 37ms - arbitrarily chosen midpoint representing the time between two notes in a gallop
+
+            double totalResonance = 0;
+
+            // Smooth gallop factor
+            double gallopFactor = 1.0 / (1.0 + Math.Exp(0.25 * (current.AdjustedDeltaTime - gallop_midpoint)));
+
+            // For each integer from 1 to 16
+            for (int p = 1; p <= 16; p++)
             {
-                deltaDifferenceEpsilon = epsilon;
+                double historicalRatio = current.History.GetRatio(p); // Look at the rhythmic interval from p notes ago
+                int period = p + 1; // Analyze the period corresponding to p+1, meaning that if we're looking 3 notes ago / a triple, this is period-(3+1)
+
+                // Nerf "smaller prime" resonances more
+                double resonanceDepth = 1.0 / Math.Pow(smallest_prime_factors[Math.Min(period, 17)], resonance_factor); // I'm not sure what resonance_factor even does
+
+                // Standard rhythmic match
+                bool isRhythmicMatch = Math.Abs(currentRatio - historicalRatio) < currentRatio * ratio_tolerance;
+
+                // Gallop match - nerf even harder
+                bool isGallopMatch = gallopFactor > 0.1 && p < 4;
+                if (!isRhythmicMatch && !isGallopMatch) continue;
+
+                // Use the gallop factor from before to blend the nerf: gallops above a certain note 1 to note 2 duration remain difficult
+                double multiplier = isGallopMatch ? (Math.Pow(gallop_midpoint / current.AdjustedDeltaTime, 2) * gallopFactor * 4) : 1.0;
+                totalResonance += resonanceDepth * multiplier;
             }
 
-            public Island(int delta, double epsilon)
-            {
-                deltaDifferenceEpsilon = epsilon;
-                Delta = Math.Max(delta, OsuDifficultyHitObject.MIN_DELTA_TIME);
-                DeltaCount++;
-            }
-
-            public int Delta { get; private set; } = int.MaxValue;
-            public int DeltaCount { get; private set; }
-
-            public void AddDelta(int delta)
-            {
-                if (Delta == int.MaxValue)
-                    Delta = Math.Max(delta, OsuDifficultyHitObject.MIN_DELTA_TIME);
-
-                DeltaCount++;
-            }
-
-            public bool IsSimilarPolarity(Island other)
-            {
-                // single delta islands shouldn't be compared
-                if (DeltaCount <= 1 || other.DeltaCount <= 1)
-                    return false;
-
-                return Math.Abs(Delta - other.Delta) < deltaDifferenceEpsilon &&
-                       DeltaCount % 2 == other.DeltaCount % 2;
-            }
-
-            public bool Equals(Island? other)
-            {
-                if (other == null)
-                    return false;
-
-                return Math.Abs(Delta - other.Delta) < deltaDifferenceEpsilon &&
-                       DeltaCount == other.DeltaCount;
-            }
-
-            public override string ToString()
-            {
-                return $"{Delta}x{DeltaCount}";
-            }
+            // Map resonance density to a multiplier - higher resonance implies lower jerk since players can play resonant patterns more efficiently
+            return 1.0 / (1.0 + totalResonance);
         }
     }
 }
