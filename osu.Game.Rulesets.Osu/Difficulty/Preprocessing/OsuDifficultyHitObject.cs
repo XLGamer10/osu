@@ -136,7 +136,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
 
         /// <summary>
         /// Struct containing the rhythm history of a given <see cref="OsuDifficultyHitObject"/>.
-        /// This rhythm history consists of the last 16 rhythmic intervals seen before this object, plus the previous note's jerk.
+        /// This rhythm history consists of the last 16 rhythmic intervals seen before this object,
+        /// the previous note's exponentially decaying jerk strain,
+        /// and the previous note's per-note decaying rhythmic strain.
         /// </summary>
         public struct RhythmHistory
         {
@@ -147,8 +149,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
             public double BasePower;
 
             // Consider jerk as its own "strain", since it propagates through notes
-            // We do not wish to consider it its own *skill* however, we still want to keep it as a factor of speed itself
+            // We do not wish to consider it its own *skill* yet, we still want to keep it as a factor of speed itself
             public double JerkStrain;
+
+            // Also consider rhythm changes to have their own "strain" that propagates through notes
+            // What on earth am I even doing?
+            public double RhythmicStrain;
 
             public RhythmHistory(int size = 16)
             {
@@ -156,6 +162,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
                 index = 0;
                 BasePower = 0;
                 JerkStrain = 0;
+                RhythmicStrain = 0;
             }
 
             // The last 16 rhythmic intervals are stored in a circular buffer
@@ -166,10 +173,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
                 BasePower = power;
             }
 
-            // Exponentially decay the integrated jerkiness
+            // Exponentially decay the jerk over time, and decay the rhythmic strain by a fixed amount per note
             public void Decay(double dt, double timeConstant)
             {
                 JerkStrain *= Math.Pow(0.5, dt / timeConstant);
+                RhythmicStrain = 1.0 + (RhythmicStrain - 1.0) * 0.8;
             }
 
             public double GetRatio(int lookback)

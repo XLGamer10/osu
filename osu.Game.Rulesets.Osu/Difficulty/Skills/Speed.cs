@@ -48,7 +48,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             double currentRhythm = RhythmEvaluator.EvaluateDifficultyOf(current);
 
             // Since currentDifficulty and currentRhythm now have comparable values (usually less than an order of magnitude away), the generalized p-norm can be used to sum them
-            double totalDifficulty = Math.Pow(Math.Pow(currentDifficulty, speedRhythmPNorm) + Math.Pow(currentRhythm, speedRhythmPNorm), 1.0 / speedRhythmPNorm);
+            double totalDifficulty = DifficultyCalculationUtils.Norm(speedRhythmPNorm, [currentDifficulty, currentRhythm]);
 
             if (current.BaseObject is Slider)
                 sliderStrains.Add(totalDifficulty);
