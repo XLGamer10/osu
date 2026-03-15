@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using osu.Framework.Utils;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Objects;
@@ -12,11 +11,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 {
     public static class RhythmEvaluator
     {
-        private const double jerk_balancing_factor = 0.100; // Increase this value to make values more based
+        private const double jerk_balancing_factor = 0.220; // Increase this value to make values more based
         private const double jerk_time_constant = 400.0; // 400ms - Time constant for the "strain" decay of the jerk
         private const double periodicity_sharpness = 0.7; // Determines how generally aggressive periodicity nerfs are, higher values are more aggressive
         private const double compression_exponent = 0.6; // Reflects the nonlinear perception of finger control effort, more relevant at higher BPMs
-        private const double rhythm_strain_coefficient = 2.0; // Increase this value to make values more based, part 2
 
         /// <summary>
         /// Calculates a rhythm multiplier for the difficulty of the tap associated with historic rhythmic interval data of the current <see cref="OsuDifficultyHitObject"/>.
@@ -48,15 +46,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             // Catch-all nerf for repetitive patterns which players can optimize, minimizing the jerk of the required motion
             double periodicityMultiplier = periodicityNerf(osuCurrObj, currentRatio);
 
-            // Get the effective ratio (rhythm multiplier) at this particular hit object and save to history
-            double immediateEffectiveRatio = getEffectiveRatio(currentRatio) * rhythm_strain_coefficient;
-            osuCurrObj.History.RhythmicStrain = Math.Max(immediateEffectiveRatio, osuCurrObj.History.RhythmicStrain);
-
             // Calculate the jerk of the required motion based off of current and previous speed difficulty, scaled by DeltaTime and a rhythmic interval factor
             double rawJerk = calculateJerk(osuCurrObj.History.BasePower, osuPrevObj.History.BasePower, osuCurrObj.AdjustedDeltaTime, epsilon, currentRatio, osuPrevObj.BaseObject is Slider);
 
-            // Accumulate jerk difficulty with all added bonuses
-            double jerkDifficulty = rawJerk * periodicityMultiplier * osuCurrObj.History.RhythmicStrain;
+            // Accumulate jerk difficulty with all added multipliers
+            double jerkDifficulty = rawJerk * periodicityMultiplier;
             osuCurrObj.History.JerkStrain += jerkDifficulty * doubletapness;
 
             // Save the current ratio and hit object's speed (power) to history
@@ -126,43 +120,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             }
 
             return 1.0 / (1.0 + totalPeriodicity * periodicity_sharpness);
-        }
-
-        // Derive a multiplier used for rewarding more awkward rhythmic ratios
-        private static double getEffectiveRatio(double deltaDifference)
-        {
-            var ratioMultipliers = new[]
-            {
-                (1.0, 1.0), // same rhythm
-                (4.0 / 3.0, 2.0), // 1/4 <-> 1/3
-                (1.5, 1.5), // 1/3 <-> 1/2
-                (5.0 / 3.0, 3.0), // 1/5 <-> 1/3
-                (2.0, 1.0), // 1/4 <-> 1/2
-                (2.5, 1.5), // 1/5 <-> 1/2
-                (3.0, 1.0), // 1/3 <-> 1/1
-                (4.0, 1.0) // 1/4 <-> 1/1
-            };
-
-            return lerpFromArrays(ratioMultipliers, deltaDifference);
-        }
-
-        private static double lerpFromArrays((double ratio, double multiplier)[] ratioMultipliers, double t)
-        {
-            if (t <= ratioMultipliers[0].ratio)
-                return ratioMultipliers[0].multiplier;
-
-            if (t >= ratioMultipliers[^1].ratio)
-                return ratioMultipliers[^1].multiplier;
-
-            for (int i = 0; i < ratioMultipliers.Length - 1; i++)
-            {
-                if (!(t >= ratioMultipliers[i].ratio) || !(t <= ratioMultipliers[i + 1].ratio)) continue;
-
-                double distance = (t - ratioMultipliers[i].ratio) / (ratioMultipliers[i + 1].ratio - ratioMultipliers[i].ratio);
-                return Interpolation.Lerp(ratioMultipliers[i].multiplier, ratioMultipliers[i + 1].multiplier, distance);
-            }
-
-            return 0;
         }
     }
 }
