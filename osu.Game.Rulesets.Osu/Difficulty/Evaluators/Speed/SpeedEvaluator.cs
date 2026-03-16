@@ -30,7 +30,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             var osuCurrObj = (OsuDifficultyHitObject)current;
             var osuPrevObj = (OsuDifficultyHitObject?)current.Previous(0);
 
-            // Update the current object's rhythm history based on the previous one (needed for later rhythm calculation)
+            // Update the current object's finger control history based on the previous one (needed for later finger control calculation)
             if (osuPrevObj != null)
             {
                 osuCurrObj.History = osuPrevObj.History;
@@ -55,7 +55,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 
             difficulty *= highBpmBonus(osuCurrObj.AdjustedDeltaTime);
 
-            // Place the object's speed difficulty in its history (needed for later rhythm calculation)
+            // Place the object's speed difficulty in its history (needed for later finger control calculation)
             osuCurrObj.History.BaseSpeed = difficulty;
 
             // Apply penalty if there's doubletappable doubles
