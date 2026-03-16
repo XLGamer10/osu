@@ -9,9 +9,9 @@ using osu.Game.Rulesets.Scoring;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 {
-    public static class RhythmEvaluator
+    public static class FingerControlEvaluator
     {
-        private const double jerk_balancing_factor = 1.00; // Increase this value to make values more based
+        private const double jerk_balancing_factor = 0.9; // Increase this value to make values more based
         private const double jerk_time_constant = 400.0; // 400ms - Time constant for the "strain" decay of the jerk
         private const double compression_exponent = 0.5; // Reflects the nonlinear perception of finger control effort, more relevant at higher BPMs
 
@@ -52,12 +52,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             // Save the current hit object's speed (power) to history
             osuCurrObj.History.Push(osuCurrObj.History.BaseSpeed);
 
-            double totalRhythm = (osuCurrObj.History.JerkStrain * jerk_balancing_factor);
+            double totalFingerControl = (osuCurrObj.History.JerkStrain * jerk_balancing_factor);
 
-            return totalRhythm;
+            return totalFingerControl;
         }
 
-        // Function that calculates the (compressed) difference between two Speed values (or "power") of two hit objects
+        // Function that calculates the (compressed) difference between two Speed values (or power) of two hit objects
         private static double calculateJerk(double currentPower, double prevPower, double dt, double epsilon, bool fromSlider)
         {
             // If the pattern is unambiguously doubletappable, assume its jerk to be 0
@@ -74,6 +74,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
                 // If the last object was a slider, this is typically a much easier transition
                 return jerk * 0.5;
             }
+
+            // TODO: add some more empirical rules akin to the old rhythm evaluator
 
             return jerk;
         }
