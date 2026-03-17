@@ -96,16 +96,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             HitWindows hitWindows = new OsuHitWindows();
             hitWindows.SetDifficulty(difficulty.OverallDifficulty);
 
-            greatHitWindow = hitWindows.WindowFor(HitResult.Great) / clockRate;
-            okHitWindow = hitWindows.WindowFor(HitResult.Ok) / clockRate;
-            mehHitWindow = hitWindows.WindowFor(HitResult.Meh) / clockRate;
-
-            if (score.Mods.Any(h => h is OsuModClassic))
-            {
-                greatHitWindow = (Math.Floor(greatHitWindow * clockRate) - 0.5) / clockRate;
-                okHitWindow = (Math.Floor(okHitWindow * clockRate) - 0.5) / clockRate;
-                mehHitWindow = (Math.Floor(mehHitWindow * clockRate) - 0.5) / clockRate;
-            }
+            greatHitWindow = (Math.Floor(greatHitWindow * clockRate) - 0.5) / clockRate;
+            okHitWindow = (Math.Floor(okHitWindow * clockRate) - 0.5) / clockRate;
+            mehHitWindow = (Math.Floor(mehHitWindow * clockRate) - 0.5) / clockRate;
 
             approachRate = OsuDifficultyCalculator.CalculateRateAdjustedApproachRate(difficulty.ApproachRate, clockRate);
             overallDifficulty = OsuDifficultyCalculator.CalculateRateAdjustedOverallDifficulty(difficulty.OverallDifficulty, clockRate);
@@ -542,7 +535,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 // We can be 99% confident that p is at least this value.
                 double pLowerBound = (n * p + z * z / 2) / (n + z * z) - z / (n + z * z) * Math.Sqrt(n * p * (1 - p) + z * z / 4);
 
-
                 // Compute the deviation assuming 300s and 100s are normally distributed, and 50s are uniformly distributed.
                 // Begin with 300s and 100s first. Ignoring 50s, we can be 99% confident that the deviation is not higher than:
                 double deviation = greatHitWindow / (Math.Sqrt(2) * DifficultyCalculationUtils.ErfInv(pLowerBound));
@@ -566,6 +558,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 return deviation;
             }
         }
+
         private double calculateCheesePValue(ScoreInfo score, OsuDifficultyAttributes attributes)
         {
             // Use z = 0 to get the MLE estimate for deviation, which is most appropriate here,
@@ -593,6 +586,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             // Use Gaussian approximation with continuity correction for the Binomial CDF to compute the probability of cheesing.
             double expectedGreatProportion = DifficultyCalculationUtils.Erf(greatHitWindow / (Math.Sqrt(2) * (double)sigma));
+
             if (usingClassicSliderAccuracy)
             {
                 double expectedGreatProportionSliders = DifficultyCalculationUtils.Erf(mehHitWindow / (Math.Sqrt(2) * (double)sigma));
