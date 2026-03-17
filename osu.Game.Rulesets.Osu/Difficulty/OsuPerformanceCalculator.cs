@@ -96,9 +96,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             HitWindows hitWindows = new OsuHitWindows();
             hitWindows.SetDifficulty(difficulty.OverallDifficulty);
 
-            greatHitWindow = (Math.Floor(greatHitWindow * clockRate) - 0.5) / clockRate;
-            okHitWindow = (Math.Floor(okHitWindow * clockRate) - 0.5) / clockRate;
-            mehHitWindow = (Math.Floor(mehHitWindow * clockRate) - 0.5) / clockRate;
+            greatHitWindow = (Math.Floor(hitWindows.WindowFor(HitResult.Great)) - 0.5) / clockRate;
+            okHitWindow = (Math.Floor(hitWindows.WindowFor(HitResult.Ok)) - 0.5) / clockRate;
+            mehHitWindow = (Math.Floor(hitWindows.WindowFor(HitResult.Meh)) - 0.5) / clockRate;
 
             approachRate = OsuDifficultyCalculator.CalculateRateAdjustedApproachRate(difficulty.ApproachRate, clockRate);
             overallDifficulty = OsuDifficultyCalculator.CalculateRateAdjustedOverallDifficulty(difficulty.OverallDifficulty, clockRate);
