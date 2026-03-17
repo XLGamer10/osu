@@ -38,6 +38,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
             double strain = distanceScaled * 1000 / currDeltaTime;
 
+            strain *= osuCurrObj.SmallCircleBonus;
+
             strain *= highBpmBonus(currDeltaTime);
 
             return strain * DifficultyCalculationUtils.Smootherstep(distance, 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
