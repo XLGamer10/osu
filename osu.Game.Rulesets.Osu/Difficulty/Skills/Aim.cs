@@ -38,7 +38,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double skillMultiplierSnap => 71.0;
         private double skillMultiplierAgility => 2.0;
-        private double skillMultiplierFlow => 244.0;
+        private double skillMultiplierFlow => 245.0;
         private double skillMultiplierTotal => 1.1;
         private double meanExponent => 1.2;
 
@@ -77,8 +77,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             if (Mods.Any(m => m is OsuModRelax))
             {
-                agilityDifficulty *= 0.0;
-                flowDifficulty *= 0.1;
+                agilityDifficulty *= 0.3;
             }
 
             double totalDifficulty = calculateTotalValue(snapDifficulty, agilityDifficulty, flowDifficulty);

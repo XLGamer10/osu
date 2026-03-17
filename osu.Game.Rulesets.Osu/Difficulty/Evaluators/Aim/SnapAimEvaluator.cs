@@ -36,7 +36,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
             var osuCurrObj = (OsuDifficultyHitObject)current;
             var osuLastObj = (OsuDifficultyHitObject)current.Previous(0);
-            var osuLastLastObj = (OsuDifficultyHitObject)current.Previous(1);
             var osuLast2Obj = (OsuDifficultyHitObject)current.Previous(2);
 
             const int radius = OsuDifficultyHitObject.NORMALISED_RADIUS;
@@ -64,13 +63,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             {
                 double sliderDistance = osuLastObj.LazyTravelDistance + osuCurrObj.LazyJumpDistance;
                 currVelocity = Math.Max(currVelocity, sliderDistance / currDeltaTime);
-            }
-
-            // As above, do the same for the previous hitobject.
-            if (osuLastLastObj.BaseObject is Slider && withSliderTravelDistance)
-            {
-                double sliderDistance = osuLastLastObj.LazyTravelDistance + osuLastObj.LazyJumpDistance;
-                prevVelocity = Math.Max(prevVelocity, sliderDistance / lastDeltaTime);
             }
 
             double wideAngleBonus = 0;
@@ -139,9 +131,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             {
                 if (withSliderTravelDistance)
                 {
-                    // We want to use the average velocity over the whole object when awarding differences, not the individual jump and slider path velocities.
-                    prevVelocity = (osuLastObj.LazyJumpDistance + osuLastLastObj.TravelDistance) / lastDeltaTime;
-                    currVelocity = (osuCurrObj.LazyJumpDistance + osuLastObj.TravelDistance) / currDeltaTime;
+                    // We want to use just the object jump without slider velocity when awarding differences
+                    currVelocity = currDistance / currDeltaTime;
                 }
 
                 // Scale with ratio of difference compared to 0.5 * max dist.
