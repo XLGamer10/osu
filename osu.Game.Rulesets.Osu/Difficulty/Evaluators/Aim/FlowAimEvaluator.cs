@@ -58,7 +58,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
                 double angularVelocity = angleDifferenceAdjusted / (osuCurrObj.AdjustedDeltaTime * 0.1);
 
                 // Low angular velocity flow (angles are consistent) is easier to follow than erratic flow
-                flowDifficulty *= 0.8 + Math.Sqrt(angularVelocity / 270.0);
+                flowDifficulty *= 0.75 + Math.Sqrt(angularVelocity / 175.0);
             }
 
             // If all three notes are overlapping - don't reward bonuses as you don't have to do additional movement
@@ -72,6 +72,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
                 overlappedNotesWeight = 1 - o1 * o2 * o3;
             }
+
+            // We use osuNextObj angle instead of osuCurrObj because in flow aim difficulty comes from the prev-curr-next angle
+            // when in snap aim we measure the difficulty at the end of the angle so prev2-prev-curr works better
 
             if (osuNextObj?.Angle != null)
             {
