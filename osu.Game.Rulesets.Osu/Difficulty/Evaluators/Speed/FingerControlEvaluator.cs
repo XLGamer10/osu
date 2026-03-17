@@ -11,7 +11,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 {
     public static class FingerControlEvaluator
     {
-        private const double jerk_balancing_factor = 0.9; // Increase this value to make values more based
+        private const double jerk_balancing_factor = 0.92; // Increase this value to make values more based
         private const double jerk_time_constant = 400.0; // 400ms - Time constant for the "strain" decay of the jerk
         private const double compression_exponent = 0.5; // Reflects the nonlinear perception of finger control effort, more relevant at higher BPMs
 
