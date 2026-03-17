@@ -55,15 +55,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             var aimCheesed = skills.OfType<Aim>().Single(a => a.IncludeSliders && a.WithCheesability);
             var speed = skills.OfType<Speed>().Single();
             var flashlight = skills.OfType<Flashlight>().SingleOrDefault();
-            var reading = skills.OfType<Reading>().Single(r => !r.WithCheesability);
-            var readingCheesed = skills.OfType<Reading>().Single(r => r.WithCheesability);
+            var reading = skills.OfType<Reading>().Single();
 
             double aimDifficultyValue = aim.DifficultyValue();
             double aimNoSlidersDifficultyValue = aimWithoutSliders.DifficultyValue();
             double cheesedAimDifficultyValue = aimCheesed.DifficultyValue();
             double speedDifficultyValue = speed.DifficultyValue();
             double readingDifficultyValue = reading.DifficultyValue();
-            double cheesedReadingDifficultyValue = readingCheesed.DifficultyValue();
 
             double[] aimMissPenaltyCoefficients = aim.GetMissPenaltyCoefficients();
             double speedDifficultStrainCount = speed.CountTopWeightedObjectDifficulties(speedDifficultyValue);
@@ -97,11 +95,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double aimRatingCheesed = osuRatingCalculator.ComputeAimRating(cheesedAimDifficultyValue);
             double speedRating = osuRatingCalculator.ComputeSpeedRating(speedDifficultyValue);
             double readingRating = osuRatingCalculator.ComputeReadingRating(readingDifficultyValue);
-            double readingRatingCheesed = osuRatingCalculator.ComputeReadingRating(cheesedReadingDifficultyValue);
 
-            double aimCheeseFactor = aimRating > 0 ? aimRatingCheesed / aimRating : 1;
-            double readingCheeseFactor = readingRating > 0 ? readingRatingCheesed / readingRating : 1;
-            double cheeseFactor = (readingCheeseFactor + aimCheeseFactor) / 2;
+            double cheeseFactor = aimRating > 0 ? aimRatingCheesed / aimRating : 1;
 
             double greatsWithCheesing = aim.GetInaccuraciesWithCheesing();
 
@@ -197,8 +192,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 new Aim(mods, false, false),
                 new Speed(mods),
                 new Aim(mods, true, true),
-                new Reading(mods, true),
-                new Reading(mods, false)
+                new Reading(mods),
             };
 
             if (mods.Any(h => h is OsuModFlashlight))

@@ -23,7 +23,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         private const double minimum_angle_relevancy_time = 2000; // 2 seconds
         private const double maximum_angle_relevancy_time = 200;
 
-        public static double EvaluateDifficultyOf(DifficultyHitObject current, bool hidden, bool withCheesability)
+        public static double EvaluateDifficultyOf(DifficultyHitObject current, bool hidden)
         {
             if (current.BaseObject is Spinner || current.Index == 0)
                 return 0;
@@ -33,22 +33,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
 
             double currDeltaTime = osuCurrObj.AdjustedDeltaTime;
 
-            if (withCheesability)
-            {
-                currDeltaTime += osuCurrObj.ExtraDeltaTime;
-            }
-
             double velocity = Math.Max(1, osuCurrObj.LazyJumpDistance / currDeltaTime); // Only allow velocity to buff
 
             double currentVisibleObjectDensity = retrieveCurrentVisibleObjectDensity(osuCurrObj);
             double pastObjectDifficultyInfluence = getPastObjectDifficultyInfluence(osuCurrObj);
 
-            double constantAngleNerfFactor = getConstantAngleNerfFactor(osuCurrObj, withCheesability);
+            double constantAngleNerfFactor = getConstantAngleNerfFactor(osuCurrObj);
 
             double noteDensityDifficulty = calculateDensityDifficulty(osuNextObj, velocity, constantAngleNerfFactor, pastObjectDifficultyInfluence, currentVisibleObjectDensity);
 
             double hiddenDifficulty = hidden
-                ? calculateHiddenDifficulty(osuCurrObj, pastObjectDifficultyInfluence, currentVisibleObjectDensity, velocity, constantAngleNerfFactor, withCheesability)
+                ? calculateHiddenDifficulty(osuCurrObj, pastObjectDifficultyInfluence, currentVisibleObjectDensity, velocity, constantAngleNerfFactor)
                 : 0;
 
             double preemptDifficulty = calculatePreemptDifficulty(velocity, constantAngleNerfFactor, osuCurrObj.Preempt);
@@ -122,14 +117,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         /// </list>
         /// </summary>
         private static double calculateHiddenDifficulty(OsuDifficultyHitObject osuCurrObj, double pastObjectDifficultyInfluence, double currentVisibleObjectDensity, double velocity,
-                                                        double constantAngleNerfFactor, bool withCheesability)
+                                                        double constantAngleNerfFactor)
         {
             double currDeltaTime = osuCurrObj.AdjustedDeltaTime;
-
-            if (withCheesability)
-            {
-                currDeltaTime += osuCurrObj.ExtraDeltaTime;
-            }
 
             // Higher preempt means that time spent invisible is higher too, we want to reward that
             double preemptFactor = Math.Pow(osuCurrObj.Preempt, 2.2) * 0.01;
@@ -216,7 +206,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         // Returns a factor of how often the current object's angle has been repeated in a certain time frame.
         // It does this by checking the difference in angle between current and past objects and sums them based on a range of similarity.
         // https://www.desmos.com/calculator/eb057a4822
-        private static double getConstantAngleNerfFactor(OsuDifficultyHitObject current, bool withCheesability)
+        private static double getConstantAngleNerfFactor(OsuDifficultyHitObject current)
         {
             double constantAngleCount = 0;
             int index = 0;
@@ -230,11 +220,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                     break;
 
                 double loopDeltaTime = osuLoopObj.AdjustedDeltaTime;
-
-                if (withCheesability)
-                {
-                    loopDeltaTime += osuLoopObj.ExtraDeltaTime;
-                }
 
                 // Account less for objects that are close to the time limit.
                 double longIntervalFactor = 1 - DifficultyCalculationUtils.ReverseLerp(loopDeltaTime, maximum_angle_relevancy_time, minimum_angle_relevancy_time);
