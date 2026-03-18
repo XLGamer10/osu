@@ -50,7 +50,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             {
                 // If the last object is a slider, then we extend the travel velocity through the slider into the current object.
                 double sliderDistance = osuCurrObj.LazyTravelDistance + osuNextObj.LazyJumpDistance;
-                currVelocity = Math.Max(currVelocity, sliderDistance / osuNextObj.AdjustedDeltaTime);
+                nextVelocity = Math.Max(nextVelocity, sliderDistance / osuNextObj.AdjustedDeltaTime);
             }
 
             double flowDifficulty = currVelocity;
@@ -86,7 +86,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             {
                 // Acute angles are also hard to flow
                 // We square root velocity to make acute angle switches in streams aren't having difficulty higher than snap
-                flowDifficulty += Math.Sqrt(currVelocity) *
+                flowDifficulty += currVelocity *
                                   SnapAimEvaluator.CalcAcuteAngleBonus(osuNextObj.Angle.Value) *
                                   overlappedNotesWeight;
             }
