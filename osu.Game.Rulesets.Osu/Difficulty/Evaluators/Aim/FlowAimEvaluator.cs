@@ -22,6 +22,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             if (current.BaseObject is Spinner || current.Index <= 1 || current.Previous(0).BaseObject is Spinner)
                 return 0;
 
+            // We use osuNextObj for everything instead of osuCurrObj because in flow aim difficulty comes from the prev-curr-next angle
+            // when in snap aim we measure the difficulty at the end of the angle so prev2-prev-curr works better
+
             var osuNextObj = (OsuDifficultyHitObject?)current.Next(0);
             if (osuNextObj == null)
                 return 0;
@@ -78,10 +81,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             double o3 = calculateOverlapFactor(osuCurrObj, osuLastObj);
 
             overlappedNotesWeight = 1 - o1 * o2 * o3;
-
-
-            // We use osuNextObj angle instead of osuCurrObj because in flow aim difficulty comes from the prev-curr-next angle
-            // when in snap aim we measure the difficulty at the end of the angle so prev2-prev-curr works better
 
             if (osuNextObj.Angle != null)
             {
