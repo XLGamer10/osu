@@ -73,14 +73,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
                 flowDifficulty *= 0.8 + Math.Sqrt(angularVelocity / 270.0);
             }
 
-            // If all three notes are overlapping - don't reward bonuses as you don't have to do additional movement
-            double overlappedNotesWeight = 1;
-
             double o1 = calculateOverlapFactor(osuNextObj, osuCurrObj);
             double o2 = calculateOverlapFactor(osuNextObj, osuLastObj);
             double o3 = calculateOverlapFactor(osuCurrObj, osuLastObj);
 
-            overlappedNotesWeight = 1 - o1 * o2 * o3;
+            // If all three notes are overlapping - don't reward bonuses as you don't have to do additional movement
+            double overlappedNotesWeight = 1 - o1 * o2 * o3;
 
             if (osuNextObj.Angle != null)
             {
