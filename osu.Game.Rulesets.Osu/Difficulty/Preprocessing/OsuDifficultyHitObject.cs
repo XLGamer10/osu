@@ -137,14 +137,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         /// <summary>
         /// Struct containing the rhythm history of a given <see cref="OsuDifficultyHitObject"/>.
         /// This rhythm history consists of the previous note's exponentially decaying jerk strain.
-        /// In the future, FingerControlHistory can contain more than just these values.
         /// </summary>
         public struct FingerControlHistory
         {
             // Store the SpeedEvaluator's calculated Power and for the next object's jerk delta
             public double BaseSpeed;
 
-            // Consider jerk as its own "strain", since it propagates through notes
+            // Consider jerk as its own "strain", since it propagates through objects
             // We do not wish to consider it its own *skill* yet, we still want to keep it as a factor of speed itself
             public double JerkStrain;
 
@@ -154,7 +153,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
                 JerkStrain = 0;
             }
 
-            public void Push(double speed)
+            public void PushSpeed(double speed)
             {
                 BaseSpeed = speed;
             }
