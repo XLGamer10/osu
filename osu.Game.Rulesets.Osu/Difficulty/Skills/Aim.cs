@@ -44,7 +44,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (skill <= 0) return 0;
 
             //not using this as I don't know if I can even use the snap probability list in this way.
-            //return pSnap <= 0.5 ? DifficultyCalculationUtils.Erf(skill / difficulty) : DifficultyCalculationUtils.Erf(skill / (Math.Sqrt(2) * difficulty));
+            //return DifficultyCalculationUtils.Erf(skill / difficulty) * (1 - pSnap) + DifficultyCalculationUtils.Erf(skill / (Math.Sqrt(2) * difficulty)) * pSnap;
             return DifficultyCalculationUtils.Erf(skill / (Math.Sqrt(2) * difficulty));
         }
 
