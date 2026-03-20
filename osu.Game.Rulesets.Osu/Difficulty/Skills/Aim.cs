@@ -32,23 +32,25 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double skillMultiplierSnap => 309.0;
         private double skillMultiplierAgility => 12.9;
-        private double skillMultiplierFlow => 1080.0;
+        private double skillMultiplierFlow => 1200.0;
         private double skillMultiplierTotal => 1.1;
         private double meanExponent => 1.2;
 
         private readonly List<double> sliderStrains = new List<double>();
 
-        protected override double HitProbability(double skill, double difficulty)
+        protected override double HitProbability(double skill, double difficulty, double pSnap)
         {
             if (difficulty <= 0) return 1;
             if (skill <= 0) return 0;
 
+            //not using this as I don't know if I can even use the snap probability list in this way.
+            //return pSnap <= 0.5 ? DifficultyCalculationUtils.Erf(skill / difficulty) : DifficultyCalculationUtils.Erf(skill / (Math.Sqrt(2) * difficulty));
             return DifficultyCalculationUtils.Erf(skill / (Math.Sqrt(2) * difficulty));
         }
 
         private double strainDecay(double ms) => Math.Pow(0.15, ms / 1000);
 
-        protected override double StrainValueAt(DifficultyHitObject current)
+        protected override (double currentStrain, double pSnap) StrainValueAt(DifficultyHitObject current)
         {
             double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
 
@@ -69,7 +71,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 flowDifficulty *= 0.1;
             }
 
-            double totalDifficulty = calculateTotalValue(snapDifficulty, agilityDifficulty, flowDifficulty);
+            // We compare flow to combined snap and agility because snap by itself doesn't have enough difficulty to be above flow on streams
+            // Agility on the other hand is supposed to measure the rate of cursor velocity changes while snapping
+            // So snapping every circle on a stream requires an enormous amount of agility at which point it's easier to flow
+            double combinedSnapDifficulty = DifficultyCalculationUtils.Norm(meanExponent, snapDifficulty, agilityDifficulty);
+            double pSnap = calculateSnapFlowProbability(flowDifficulty / combinedSnapDifficulty);
+
+            double totalDifficulty = calculateTotalValue(pSnap, combinedSnapDifficulty, flowDifficulty);
 
             currentStrain *= decay;
             currentStrain += totalDifficulty * (1 - decay);
@@ -77,17 +85,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (current.BaseObject is Slider)
                 sliderStrains.Add(currentStrain);
 
-            return currentStrain;
+            return (currentStrain, pSnap);
         }
 
-        private double calculateTotalValue(double snapDifficulty, double agilityDifficulty, double flowDifficulty)
+        private double calculateTotalValue(double pSnap, double combinedSnapDifficulty, double flowDifficulty)
         {
-            // We compare flow to combined snap and agility because snap by itself doesn't have enough difficulty to be above flow on streams
-            // Agility on the other hand is supposed to measure the rate of cursor velocity changes while snapping
-            // So snapping every circle on a stream requires an enormous amount of agility at which point it's easier to flow
-            double combinedSnapDifficulty = DifficultyCalculationUtils.Norm(meanExponent, snapDifficulty, agilityDifficulty);
-
-            double pSnap = calculateSnapFlowProbability(flowDifficulty / combinedSnapDifficulty);
             double pFlow = 1 - pSnap;
 
             double totalDifficulty = combinedSnapDifficulty * pSnap + flowDifficulty * pFlow;
@@ -143,6 +145,5 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             // Use a weighted sum of all strains. Constants are arbitrary and give nice values
             return sliderStrains.Sum(s => DifficultyCalculationUtils.Logistic(s / consistentTopStrain, 0.88, 10, 1.1));
         }
-
     }
 }
