@@ -62,7 +62,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private double aimEstimatedSliderBreaks;
         private double speedEstimatedSliderBreaks;
 
-        public static double DifficultyToPerformance(double difficulty) => 4.0 * Math.Pow(difficulty, 3.0);
+        public static double DifficultyToPerformance(double difficulty) => 4.0 * Math.Pow(difficulty, 3.3);
 
         public OsuPerformanceCalculator()
             : base(new OsuRuleset())

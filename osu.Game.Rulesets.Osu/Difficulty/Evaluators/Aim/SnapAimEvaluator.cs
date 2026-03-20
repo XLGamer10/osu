@@ -112,7 +112,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
                     if (distance < 1)
                     {
-                        wideAngleBonus *= 1 - 0.55 * (1 - distance);
+                        wideAngleBonus *= 1 - 0.80 * (1 - distance);
                     }
                 }
             }
@@ -159,16 +159,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             // Apply high circle size bonus
             aimStrain *= osuCurrObj.SmallCircleBonus;
 
-            aimStrain *= highBpmBonus(osuCurrObj.AdjustedDeltaTime, osuCurrObj.LazyJumpDistance);
-
             return aimStrain;
         }
-
-        // We decrease strain for distances <radius to fix cases where doubles with no aim requirement
-        // have their strain buffed incredibly high due to the delta time.
-        // These objects do not require any movement, so it does not make sense to award them.
-        private static double highBpmBonus(double ms, double distance) => 1 / (1 - Math.Pow(0.03, Math.Pow(ms / 1000, 0.65)))
-                                                                          * DifficultyCalculationUtils.Smootherstep(distance, 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
 
         private static double vectorAngleRepetition(OsuDifficultyHitObject current, OsuDifficultyHitObject previous)
         {
