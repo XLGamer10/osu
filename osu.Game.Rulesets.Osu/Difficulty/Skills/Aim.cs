@@ -35,9 +35,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double maxStrain;
         private double currentStrain;
 
-        private double skillMultiplierSnap => 500.0;
-        private double skillMultiplierAgility => 17.2;
-        private double skillMultiplierFlow => 1030.0;
+        private double skillMultiplierSnap => 455.0;
+        private double skillMultiplierAgility => 12.7;
+        private double skillMultiplierFlow => 1000.0;
         private double skillMultiplierTotal => 1.1;
         private double meanExponent => 1.2;
 
@@ -57,7 +57,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         {
             double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
 
-            double angleDifficulty = AngleEvaluator.EvaluateDifficultyOf(current, IncludeSliders, WithCheesability) * skillMultiplierSnap;
             double snapDifficulty = SnapAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders, WithCheesability) * skillMultiplierSnap;
             double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current, WithCheesability) * skillMultiplierAgility;
             double flowDifficulty = FlowAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders, WithCheesability) * skillMultiplierFlow;
@@ -75,7 +74,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 flowDifficulty *= 0.1;
             }
 
-            double totalDifficulty = calculateTotalValue(angleDifficulty, snapDifficulty, agilityDifficulty, flowDifficulty);
+            double totalDifficulty = calculateTotalValue(snapDifficulty, agilityDifficulty, flowDifficulty);
 
             currentStrain *= decay;
             currentStrain += totalDifficulty * (1 - decay);
@@ -90,12 +89,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return currentStrain;
         }
 
-        private double calculateTotalValue(double angleDifficulty, double snapDifficulty, double agilityDifficulty, double flowDifficulty)
+        private double calculateTotalValue(double snapDifficulty, double agilityDifficulty, double flowDifficulty)
         {
             // We compare flow to combined snap and agility because snap by itself doesn't have enough difficulty to be above flow on streams
             // Agility on the other hand is supposed to measure the rate of cursor velocity changes while snapping
             // So snapping every circle on a stream requires an enormous amount of agility at which point it's easier to flow
-            double combinedSnapDifficulty = DifficultyCalculationUtils.Norm(meanExponent, angleDifficulty, snapDifficulty, agilityDifficulty);
+            double combinedSnapDifficulty = DifficultyCalculationUtils.Norm(meanExponent, snapDifficulty, agilityDifficulty);
 
             double pSnap = calculateSnapFlowProbability(flowDifficulty / combinedSnapDifficulty);
             double pFlow = 1 - pSnap;

@@ -53,7 +53,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             var aim = skills.OfType<Aim>().Single(a => a.IncludeSliders && !a.WithCheesability);
             var aimWithoutSliders = skills.OfType<Aim>().Single(a => !a.IncludeSliders && !a.WithCheesability);
             var aimCheesed = skills.OfType<Aim>().Single(a => a.IncludeSliders && a.WithCheesability);
-            var speed = skills.OfType<Speed>().Single(s => !s.WithoutStamina);
+            var speed = skills.OfType<Speed>().Single();
             var flashlight = skills.OfType<Flashlight>().SingleOrDefault();
             var reading = skills.OfType<Reading>().Single();
 
@@ -190,8 +190,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             {
                 new Aim(mods, true, false),
                 new Aim(mods, false, false),
-                new Speed(mods, false),
-                new Speed(mods, true),
+                new Speed(mods),
                 new Aim(mods, true, true),
                 new Reading(mods),
             };
