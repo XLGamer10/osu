@@ -30,10 +30,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double currentStrain;
 
-        private double skillMultiplierSnap => 309.0;
-        private double skillMultiplierAgility => 12.9;
-        private double skillMultiplierFlow => 1200.0;
-        private double skillMultiplierTotal => 1.1;
+        private double skillMultiplierSnap => 355.0;
+        private double skillMultiplierAgility => 10.0;
+        private double skillMultiplierFlow => 1100;
+        private double skillMultiplierTotal => 1.05;
         private double meanExponent => 1.2;
 
         private readonly List<double> sliderStrains = new List<double>();
@@ -67,8 +67,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             if (Mods.Any(m => m is OsuModRelax))
             {
-                agilityDifficulty *= 0.0;
-                flowDifficulty *= 0.1;
+                agilityDifficulty *= 0.3;
             }
 
             // We compare flow to combined snap and agility because snap by itself doesn't have enough difficulty to be above flow on streams
@@ -137,7 +136,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (sliderStrains.Count == 0)
                 return 0;
 
-            double consistentTopStrain = difficultyValue / 10; // What would the top strain be if all strain values were identical
+            double consistentTopStrain = difficultyValue * (1 - 0.9); // What would the top strain be if all strain values were identical
 
             if (consistentTopStrain == 0)
                 return 0;
