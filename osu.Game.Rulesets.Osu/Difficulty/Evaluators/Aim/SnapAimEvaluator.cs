@@ -12,10 +12,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 {
     public static class SnapAimEvaluator
     {
-        private const double wide_angle_multiplier = 1.00;
-        private const double acute_angle_multiplier = 2.41;
-        private const double slider_multiplier = 1.3;
-        private const double velocity_change_multiplier = 0.9;
+        private const double wide_angle_multiplier = 0.85;
+        private const double acute_angle_multiplier = 2.13;
+        private const double slider_multiplier = 0.75;
+        private const double velocity_change_multiplier = 1.1;
         private const double wiggle_multiplier = 1.02; // WARNING: Increasing this multiplier beyond 1.02 reduces difficulty as distance increases. Refer to the desmos link above the wiggle bonus calculation
         private const double maximum_repetition_nerf = 0.15;
         private const double maximum_vector_influence = 0.5;
