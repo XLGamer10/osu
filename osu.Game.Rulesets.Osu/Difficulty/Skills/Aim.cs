@@ -35,9 +35,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double maxStrain;
         private double currentStrain;
 
-        private double skillMultiplierSnap => 460.0;
-        private double skillMultiplierAgility => 12.7;
-        private double skillMultiplierFlow => 1000.0;
+        private double skillMultiplierSnap => 480.0;
+        private double skillMultiplierAgility => 12.0;
+        private double skillMultiplierFlow => 1100.0;
         private double skillMultiplierTotal => 1.1;
         private double meanExponent => 1.2;
 
@@ -70,8 +70,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             if (Mods.Any(m => m is OsuModRelax))
             {
-                agilityDifficulty *= 0.0;
-                flowDifficulty *= 0.1;
+                agilityDifficulty *= 0.3;
             }
 
             double totalDifficulty = calculateTotalValue(snapDifficulty, agilityDifficulty, flowDifficulty);
@@ -144,7 +143,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (sliderStrains.Count == 0)
                 return 0;
 
-            double consistentTopStrain = difficultyValue / 10; // What would the top strain be if all strain values were identical
+            double consistentTopStrain = difficultyValue * (1 - 0.9); // What would the top strain be if all strain values were identical
+
             if (consistentTopStrain == 0)
                 return 0;
             // Use a weighted sum of all strains. Constants are arbitrary and give nice values
