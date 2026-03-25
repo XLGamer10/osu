@@ -33,13 +33,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
             //Due to removing highBomBonus from SnapAimEvaluator, precision streams can sometimes be seen as easier snapped when they are flowed.
             //So we give a bonus for precision when the aim is fast, like in streams.
-            strain *= Math.Pow(osuCurrObj.SmallCircleBonus, Math.Pow(highBpmBonus(osuCurrObj.AdjustedDeltaTime), 0.75));
+            strain *= Math.Pow(osuCurrObj.SmallCircleBonus, Math.Pow(highBpmBonus(osuCurrObj.AdjustedDeltaTime), 0.85));
 
             strain *= highBpmBonus(osuCurrObj.AdjustedDeltaTime);
 
             return strain * DifficultyCalculationUtils.Smootherstep(distance, 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
         }
 
-        private static double highBpmBonus(double ms) => 1 / (1 - Math.Pow(0.15, ms / 1000));
+        private static double highBpmBonus(double ms) => 1 / (1 - Math.Pow(0.2, ms / 1000));
     }
 }
