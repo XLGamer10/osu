@@ -31,7 +31,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
             double strain = distanceScaled * 1000 / osuCurrObj.AdjustedDeltaTime;
 
-            strain *= osuCurrObj.SmallCircleBonus;
+            //Due to removing highBomBonus from SnapAimEvaluator, precision streams can sometimes be seen as easier snapped when they are flowed.
+            //So we give a bonus for precision when the aim is fast, like in streams.
+            strain *= Math.Pow(osuCurrObj.SmallCircleBonus, Math.Pow(highBpmBonus(osuCurrObj.AdjustedDeltaTime), 0.75));
 
             strain *= highBpmBonus(osuCurrObj.AdjustedDeltaTime);
 
