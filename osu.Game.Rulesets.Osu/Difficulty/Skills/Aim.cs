@@ -36,9 +36,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double currentStrain;
 
         private double skillMultiplierSnap => 310.0;
-        private double skillMultiplierAgility => 12.5;
+        private double skillMultiplierAgility => 15.0;
         private double skillMultiplierFlow => 1100.0;
-        private double skillMultiplierTotal => 1.1;
+        private double skillMultiplierTotal => 1.12;
         private double meanExponent => 1.2;
 
         private readonly List<double> sliderStrains = new List<double>();
@@ -51,7 +51,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return DifficultyCalculationUtils.Erf(skill / (Math.Sqrt(2) * difficulty));
         }
 
-        private double strainDecay(double ms) => Math.Pow(0.15, ms / 1000);
+        private double strainDecay(double ms) => Math.Pow(0.2, ms / 1000);
 
         protected override double StrainValueAt(DifficultyHitObject current)
         {

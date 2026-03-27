@@ -586,6 +586,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             // Use Gaussian approximation with continuity correction for the Binomial CDF to compute the probability of cheesing.
             double expectedGreatProportion = DifficultyCalculationUtils.Erf(greatHitWindow / (Math.Sqrt(2) * (double)sigma));
+
             if (usingClassicSliderAccuracy)
             {
                 double expectedGreatProportionSliders = DifficultyCalculationUtils.Erf(mehHitWindow / (Math.Sqrt(2) * (double)sigma));
@@ -632,7 +633,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         // With the strain count miss penalty, we use the amount of relatively difficult sections to adjust the miss penalty,
         // to make it more punishing on maps with lower amount of hard sections. This formula is subject to balance.
-        private double calculateStrainCountMissPenalty(double missCount, double difficultStrainCount) => 0.96 / (missCount / (4 * Math.Pow(Math.Log(difficultStrainCount), 0.94)) + 1);
+        private double calculateStrainCountMissPenalty(double missCount, double difficultStrainCount) => 0.93 / (missCount / (4 * Math.Log(difficultStrainCount)) + 1);
 
         private double getComboScalingFactor(OsuDifficultyAttributes attributes) => attributes.MaxCombo <= 0 ? 1.0 : Math.Min(Math.Pow(scoreMaxCombo, 0.8) / Math.Pow(attributes.MaxCombo, 0.8), 1.0);
 
