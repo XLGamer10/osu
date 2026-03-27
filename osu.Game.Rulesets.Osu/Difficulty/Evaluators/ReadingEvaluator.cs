@@ -235,14 +235,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
 
                     if (loopObjPrev0.Angle != null && loopObjPrev1?.Angle != null && loopObjPrev2?.Angle != null)
                     {
-                        angleDifferenceAlternating = Math.Abs(loopObjPrev1.Angle.Value - loopObj.Angle.Value);
+                        angleDifferenceAlternating = Math.Abs(loopObjPrev1.Angle.Value - osuLoopObj.Angle.Value);
                         angleDifferenceAlternating += Math.Abs(loopObjPrev2.Angle.Value - loopObjPrev0.Angle.Value);
 
                         double weight = 1.0;
 
                         // Be sure that one of the angles is very sharp, when other is wide
-                        weight *= DifficultyCalculationUtils.ReverseLerp(Math.Min(loopObj.Angle.Value, loopObjPrev0.Angle.Value) * 180 / Math.PI, 20, 5);
-                        weight *= DifficultyCalculationUtils.ReverseLerp(Math.Max(loopObj.Angle.Value, loopObjPrev0.Angle.Value) * 180 / Math.PI, 60, 120);
+                        weight *= DifficultyCalculationUtils.ReverseLerp(Math.Min(osuLoopObj.Angle.Value, loopObjPrev0.Angle.Value) * 180 / Math.PI, 20, 5);
+                        weight *= DifficultyCalculationUtils.ReverseLerp(Math.Max(osuLoopObj.Angle.Value, loopObjPrev0.Angle.Value) * 180 / Math.PI, 60, 120);
 
                         // Lerp between max angle difference and rescaled alternating difference, with more harsh scaling compared to normal difference
                         angleDifferenceAlternating = double.Lerp(Math.PI, 0.1 * angleDifferenceAlternating, weight);
