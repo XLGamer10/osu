@@ -143,7 +143,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (sliderStrains.Count == 0)
                 return 0;
 
-            double consistentTopStrain = difficultyValue / 10; // What would the top strain be if all strain values were identical
+            double consistentTopStrain = difficultyValue * (1 - 0.9); // What would the top strain be if all strain values were identical
 
             if (consistentTopStrain == 0)
                 return 0;

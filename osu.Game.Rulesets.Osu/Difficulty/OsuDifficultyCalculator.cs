@@ -112,7 +112,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             var simulator = new OsuLegacyScoreSimulator();
             var scoreAttributes = simulator.Simulate(WorkingBeatmap, beatmap);
 
-            double baseAimPerformance = OsuPerformanceCalculator.DifficultyToPerformance(aimRating);
+            double baseAimPerformance = TimeSkill.DifficultyToPerformance(aimRating);
             double baseSpeedPerformance = HarmonicSkill.DifficultyToPerformance(speedRating);
             double baseReadingPerformance = HarmonicSkill.DifficultyToPerformance(readingRating);
             double baseFlashlightPerformance = Flashlight.DifficultyToPerformance(flashlightRating);
@@ -195,7 +195,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 new Aim(mods, false, false),
                 new Speed(mods),
                 new Aim(mods, true, true),
-                new Reading(mods),
+                new Reading(mods)
             };
 
             if (mods.Any(h => h is OsuModFlashlight))
