@@ -16,7 +16,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         private const double reading_window_size = 3000; // 3 seconds
         private const double distance_influence_threshold = OsuDifficultyHitObject.NORMALISED_DIAMETER * 1.5; // 1.5 circles distance between centers
         private const double minimum_distance_buff = OsuDifficultyHitObject.NORMALISED_DIAMETER * 5; // start buffing jumps for hidden from a certain distance onward
-        private const double hidden_distance_buff = 150;
+        private const double hidden_distance_buff = 200;
         private const double hidden_multiplier = 0.28;
         private const double density_multiplier = 2.4;
         private const double density_difficulty_base = 2.5;
