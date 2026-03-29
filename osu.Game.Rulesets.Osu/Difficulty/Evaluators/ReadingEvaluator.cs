@@ -126,7 +126,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
             double densityFactor = Math.Pow(currentVisibleObjectDensity + pastObjectDifficultyInfluence, 3.3) * 3;
 
             double transparencyFactor = (densityFactor + preemptFactor) * 0.01;
-            double densityInfluence = DifficultyCalculationUtils.Smootherstep(transparencyFactor, 60, 125) * DifficultyCalculationUtils.Smootherstep(transparencyFactor, 800, 200);
+            double densityInfluence = DifficultyCalculationUtils.Smootherstep(transparencyFactor, 55, 125) * DifficultyCalculationUtils.Smootherstep(transparencyFactor, 600, 200);
             double buffedDistance = Math.Pow(Math.Max(currObj.LazyJumpDistance, minimum_distance_buff) - minimum_distance_buff, 1.15);
 
             double distanceFactor = (buffedDistance - Math.Atan(buffedDistance)) * hidden_distance_buff * densityInfluence * 0.01;
