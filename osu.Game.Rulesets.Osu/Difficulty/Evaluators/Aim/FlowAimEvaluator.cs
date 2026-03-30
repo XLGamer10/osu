@@ -80,12 +80,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             // If all three notes are overlapping - don't reward bonuses as you don't have to do additional movement
             double overlappedNotesWeight = 1 - o1 * o2 * o3;
 
-            if (osuNextObj.Angle != null)
+            if (osuCurrObj.Angle != null && osuNextObj.Angle != null)
             {
                 // Acute angles are also hard to flow
-                // We square root velocity to make acute angle switches in streams aren't having difficulty higher than snap
                 flowDifficulty += currVelocity *
-                                  SnapAimEvaluator.CalcAcuteAngleBonus(osuNextObj.Angle.Value) *
+                                  Math.Min(SnapAimEvaluator.CalcAcuteAngleBonus(osuCurrObj.Angle.Value), SnapAimEvaluator.CalcAcuteAngleBonus(osuNextObj.Angle.Value)) *
                                   overlappedNotesWeight;
             }
 
