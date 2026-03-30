@@ -127,17 +127,18 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
 
             // Account for both past and current densities
             double densityFactor = Math.Pow(currentVisibleObjectDensity + pastObjectDifficultyInfluence, 3.3) * 3;
-
             double transparencyFactor = densityFactor + preemptFactor * 0.01;
+
+            // Makeshift curve for reducing the bonus on low density, high ar and very low ar and very high density.
             double densityInfluence = DifficultyCalculationUtils.Smootherstep(transparencyFactor, 90, 400)
                                       * (1 + DifficultyCalculationUtils.Smootherstep(transparencyFactor, 245, 2000) * 0.3)
                                       * DifficultyCalculationUtils.Smootherstep(transparencyFactor, 15000, 3000);
 
             double buffedDistance = Math.Pow(Math.Max(currObj.LazyJumpDistance, minimum_distance_buff) - minimum_distance_buff, 1.0);
-            double distanceFactor = (buffedDistance - Math.Atan(buffedDistance)) * hidden_distance_buff * densityInfluence;
+            double distanceFactor = (buffedDistance - Math.Atan(buffedDistance)) * densityInfluence;
 
             double inherentHiddenDifficulty = (preemptFactor + densityFactor) * constantAngleNerfFactor * velocity * 0.01;
-            double distanceHiddenDifficulty = distanceFactor * Math.Pow(constantAngleNerfFactor, 0.5) * 0.01 * Math.Log(velocity + 1);
+            double distanceHiddenDifficulty = Math.Log(distanceFactor * Math.Sqrt(constantAngleNerfFactor + velocity) * 0.01 + 1) * hidden_distance_buff;
 
             // Apply a soft cap to general HD reading to account for partial memorization
             double hiddenDifficulty = (Math.Pow(inherentHiddenDifficulty, 0.4) + Math.Pow(distanceHiddenDifficulty, 0.75)) * hidden_multiplier;
