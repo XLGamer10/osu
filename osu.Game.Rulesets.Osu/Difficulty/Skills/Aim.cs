@@ -9,6 +9,7 @@ using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Skills;
 using osu.Game.Rulesets.Difficulty.Utils;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Scoring;
 using osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Mods;
@@ -30,6 +31,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         }
 
         private double currentStrain;
+        private double preservedStrain = 0;
 
         private double skillMultiplierSnap => 70.9;
         private double skillMultiplierAgility => 2.35;
@@ -58,6 +60,19 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         protected override double StrainValueAt(DifficultyHitObject current)
         {
             double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
+
+            double deltaDifferenceEpsilon = ((OsuDifficultyHitObject)current).HitWindow(HitResult.Great) * 0.3;
+            // if we speed up - aim strain should get preserved until we slow back down
+            if (current.DeltaTime - (current.Previous(0)?.DeltaTime ?? current.DeltaTime) < -deltaDifferenceEpsilon)
+            {
+                preservedStrain = Math.Max(preservedStrain, currentStrain);
+            }
+            // we slow back down, so add back the preserved strain and reset preserved strain
+            if (current.DeltaTime - (current.Previous(0)?.DeltaTime ?? current.DeltaTime) > deltaDifferenceEpsilon)
+            {
+                currentStrain = Math.Max(currentStrain, preservedStrain);
+                preservedStrain = 0;
+            }
 
             double snapDifficulty = SnapAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierSnap;
             double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current) * skillMultiplierAgility;
