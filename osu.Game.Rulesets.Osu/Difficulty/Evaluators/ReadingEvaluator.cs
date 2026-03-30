@@ -16,7 +16,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         private const double reading_window_size = 3000; // 3 seconds
         private const double distance_influence_threshold = OsuDifficultyHitObject.NORMALISED_DIAMETER * 1.5; // 1.5 circles distance between centers
         private const double minimum_distance_buff = OsuDifficultyHitObject.NORMALISED_DIAMETER * 5; // start buffing jumps for hidden from a certain distance onward
-        private const double hidden_distance_buff = 600;
+        private const double hidden_distance_buff = 40;
         private const double hidden_multiplier = 0.28;
         private const double density_multiplier = 2.4;
         private const double density_difficulty_base = 2.5;
@@ -133,13 +133,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                                       * (1 + DifficultyCalculationUtils.Smootherstep(transparencyFactor, 245, 2000) * 0.3)
                                       * DifficultyCalculationUtils.Smootherstep(transparencyFactor, 15000, 3000);
 
-            double buffedDistance = Math.Pow(Math.Max(currObj.LazyJumpDistance, minimum_distance_buff) - minimum_distance_buff, 1.2);
+            double buffedDistance = Math.Pow(Math.Max(currObj.LazyJumpDistance, minimum_distance_buff) - minimum_distance_buff, 1.0);
             double distanceFactor = (buffedDistance - Math.Atan(buffedDistance)) * hidden_distance_buff * densityInfluence;
 
-            double hiddenDifficulty = ((preemptFactor + densityFactor) * Math.Sqrt(constantAngleNerfFactor) + distanceFactor) * Math.Sqrt(constantAngleNerfFactor) * velocity * 0.01;
+            double inherentHiddenDifficulty = (preemptFactor + densityFactor) * constantAngleNerfFactor * velocity * 0.01;
+            double distanceHiddenDifficulty = distanceFactor * Math.Pow(constantAngleNerfFactor, 0.5) * 0.01 * Math.Log(velocity + 1);
 
             // Apply a soft cap to general HD reading to account for partial memorization
-            hiddenDifficulty = Math.Pow(hiddenDifficulty, 0.4) * hidden_multiplier;
+            double hiddenDifficulty = (Math.Pow(inherentHiddenDifficulty, 0.4) + Math.Pow(distanceHiddenDifficulty, 0.75)) * hidden_multiplier;
 
             var previousObj = (OsuDifficultyHitObject)currObj.Previous(0);
 
