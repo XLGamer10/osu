@@ -138,7 +138,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
             double distanceFactor = (buffedDistance - Math.Atan(buffedDistance)) * densityInfluence;
 
             double inherentHiddenDifficulty = (preemptFactor + densityFactor) * constantAngleNerfFactor * velocity * 0.01;
-            double distanceHiddenDifficulty = Math.Log(distanceFactor * Math.Sqrt(constantAngleNerfFactor + velocity) * 0.01 + 1) * hidden_distance_buff;
+            double distanceHiddenDifficulty = Math.Log(distanceFactor * Math.Sqrt(constantAngleNerfFactor * velocity) * 0.01 + 1) * hidden_distance_buff;
 
             // Apply a soft cap to general HD reading to account for partial memorization
             double hiddenDifficulty = (Math.Pow(inherentHiddenDifficulty, 0.4) + Math.Pow(distanceHiddenDifficulty, 0.75)) * hidden_multiplier;
