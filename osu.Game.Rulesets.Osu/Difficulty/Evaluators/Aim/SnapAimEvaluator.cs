@@ -12,7 +12,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 {
     public static class SnapAimEvaluator
     {
-        private const double wide_angle_multiplier = 0.70;
+        private const double wide_angle_multiplier = 0.3;
         private const double acute_angle_multiplier = 2.13;
         private const double slider_multiplier = 0.90;
         private const double velocity_change_multiplier = 0.95;
