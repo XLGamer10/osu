@@ -15,9 +15,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
     {
         private const double reading_window_size = 3000; // 3 seconds
         private const double distance_influence_threshold = OsuDifficultyHitObject.NORMALISED_DIAMETER * 1.5; // 1.5 circles distance between centers
-        private const double minimum_distance_buff = OsuDifficultyHitObject.NORMALISED_DIAMETER * 5; // start buffing jumps for hidden from a certain distance onward
-        private const double hidden_very_long_distance_nerf = 10; // the higher the number, the less impact high distances have on the buff, pair an increase with a decrease in hidden_distance_buff
-        private const double hidden_distance_buff = 14;
+        private const double minimum_distance_buff = OsuDifficultyHitObject.NORMALISED_DIAMETER * 4.50; // start buffing jumps for hidden from a certain distance onward
+        private const double hidden_very_long_distance_nerf = 200; // the higher the number, the less impact high distances have on the buff, pair an increase with a decrease in hidden_distance_buff
+        private const double hidden_distance_buff = 3.0;
         private const double hidden_multiplier = 0.28;
         private const double density_multiplier = 2.4;
         private const double density_difficulty_base = 2.5;
@@ -128,12 +128,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
 
             // Account for both past and current densities
             double densityFactor = Math.Pow(currentVisibleObjectDensity + pastObjectDifficultyInfluence, 3.3) * 3;
-            double transparencyFactor = densityFactor + preemptFactor * 0.01;
 
             // Makeshift curve for reducing the bonus on low density, high ar and very low ar and very high density.
-            double densityInfluence = DifficultyCalculationUtils.Smootherstep(transparencyFactor, 90, 400)
-                                      * (1 + DifficultyCalculationUtils.Smootherstep(transparencyFactor, 245, 2000) * 0.3)
-                                      * DifficultyCalculationUtils.Smootherstep(transparencyFactor, 15000, 3000);
+            double densityInfluence = DifficultyCalculationUtils.Smootherstep(densityFactor, 60, 300)
+                                      * (1 + DifficultyCalculationUtils.Smootherstep(densityFactor, 180, 1000) * 0.3)
+                                      * DifficultyCalculationUtils.Smootherstep(densityFactor, 6000, 1750);
 
             double buffedDistance = Math.Max(currObj.LazyJumpDistance, minimum_distance_buff) - minimum_distance_buff;
             double distanceFactor = (buffedDistance - Math.Atan(buffedDistance)) * densityInfluence;
