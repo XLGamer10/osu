@@ -48,7 +48,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             // Base difficulty with all bonuses
             double difficulty = (1 + speedBonus) * 1000 / strainTime;
 
-            difficulty *= highBpmBonus(osuCurrObj.AdjustedDeltaTime);
+            //difficulty *= highBpmBonus(osuCurrObj.AdjustedDeltaTime);
 
             // Place the object's speed difficulty in its history (needed for later finger control calculation)
             osuCurrObj.History.BaseSpeed = difficulty;

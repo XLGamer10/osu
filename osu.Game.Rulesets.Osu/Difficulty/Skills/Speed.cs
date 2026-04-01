@@ -23,7 +23,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double burstMultiplier => 2.45;
         private double streamMultiplier => 0.2;
         private double staminaMultiplier => 0.05;
-        private double fControlMultiplier => 1.00;
+        private double fControlMultiplier => 1.10;
         private double meanExponent => 1.25;
         private double speedFControlNorm => 1.5;
 
