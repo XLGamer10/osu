@@ -66,8 +66,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
                 currDeltaTime += osuCurrObj.ExtraDeltaTime;
             }
 
-            double travelDistance = osuPrevObj?.LazyTravelDistance ?? 0;
-            double distance = travelDistance + osuCurrObj.LazyJumpDistance;
+            double distance = osuCurrObj.GetDistance(true);
+
             double distanceScaled = Math.Min(distance, distance_cap) / distance_cap;
             return distanceScaled * 1000 / currDeltaTime;
         }
