@@ -193,7 +193,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             {
                 new Aim(mods, true, false),
                 new Aim(mods, false, false),
-                new Speed(mods),
+                new Speed(mods, false),
+                new Speed(mods, true),
                 new Aim(mods, true, true),
                 new Reading(mods),
             };

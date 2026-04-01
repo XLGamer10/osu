@@ -54,7 +54,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             strain *= Math.Pow(osuCurrObj.SmallCircleBonus, 1.5);
             strain *= highBpmBonus(currDeltaTime);
 
-            return strain * DifficultyCalculationUtils.Smootherstep(osuCurrObj.LazyJumpDistance, 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
+            return strain * DifficultyCalculationUtils.Smootherstep(osuCurrObj.GetDistance(true), 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
         }
 
         private static double getStrain(OsuDifficultyHitObject osuCurrObj, OsuDifficultyHitObject? osuPrevObj, bool withCheesability)

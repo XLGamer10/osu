@@ -43,13 +43,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             if (osuPrevObj.BaseObject is Slider)
             {
                 applySliderPenalty = true;
-                sliderJumpDist = osuCurrObj.LazyJumpDistance;
+                sliderJumpDist = osuCurrObj.AdjustedDeltaTime;
             }
             else if (osuPrevPrevObj?.BaseObject is Slider)
             {
                 applySliderPenalty = true;
                 // We are on the second note, but we need the jump distance from the previous transition
-                sliderJumpDist = osuPrevObj.LazyJumpDistance;
+                sliderJumpDist = osuPrevObj.GetDistance(true);
             }
 
             // Extract the previous and current object's speed values and several other metrics for state machine and hold time estimations
@@ -96,8 +96,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             {
                 var osuPrevObj = (OsuDifficultyHitObject)osuCurrObj.Previous(0);
                 double jumpDistance = (osuPrevObj.BaseObject is Slider)
-                    ? osuCurrObj.LazyJumpDistance
-                    : osuPrevObj.LazyJumpDistance;
+                    ? osuCurrObj.GetDistance(true)
+                    : osuPrevObj.GetDistance(true);
 
                 double penaltyScaling = Math.Exp(-jumpDistance / 300.0);
                 jerk *= 1.0 - 0.5 * penaltyScaling;
