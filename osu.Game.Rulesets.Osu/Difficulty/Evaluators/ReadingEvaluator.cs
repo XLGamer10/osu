@@ -51,7 +51,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
             double difficulty = DifficultyCalculationUtils.Norm(1.5, preemptDifficulty, hiddenDifficulty, noteDensityDifficulty);
 
             // Having less time to process information is harder
-            difficulty *= highBpmBonus(currObj.AdjustedDeltaTime);
+            difficulty *= highBpmBonus(osuCurrObj.AdjustedDeltaTime);
 
             return difficulty;
         }
