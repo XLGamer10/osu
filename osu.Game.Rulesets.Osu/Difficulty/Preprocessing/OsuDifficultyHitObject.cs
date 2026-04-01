@@ -133,63 +133,39 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         public double ExtraDeltaTime { get; private set; }
 
         /// <summary>
-        /// Struct containing the rhythmic surprise at different scales, from finest (E0 = 1-note predictor)
-        /// to coarsest (E5 = 32-note predictor)
+        /// Accessor for FingerControlHistory.
         /// </summary>
-        public RhythmScaleStates RhythmState { get; set; }
+        public FingerControlHistory History = new FingerControlHistory();
 
-        public struct RhythmScaleStates
+        /// <summary>
+        /// Struct containing the rhythm history of a given <see cref="OsuDifficultyHitObject"/>.
+        /// This rhythm history consists of the previous note's exponentially decaying jerk strain.
+        /// </summary>
+        public struct FingerControlHistory
         {
-            public double E0, E1, E2, E3, E4, E5;
+            // Store the SpeedEvaluator's calculated Power and for the next object's jerk delta
+            public double BaseSpeed;
 
-            public void AddEnergy(int index, double amount)
+            // Consider jerk as its own "strain", since it propagates through objects
+            // We do not wish to consider it its own *skill* yet, we still want to keep it as a factor of speed itself
+            public double JerkStrain;
+
+            public FingerControlHistory()
             {
-                switch (index)
-                {
-                    case 0: E0 += amount; break;
-
-                    case 1: E1 += amount; break;
-
-                    case 2: E2 += amount; break;
-
-                    case 3: E3 += amount; break;
-
-                    case 4: E4 += amount; break;
-
-                    case 5: E5 += amount; break;
-                }
+                BaseSpeed = 0;
+                JerkStrain = 0;
             }
 
-            public void ResetScale(int index)
+            public void PushSpeed(double speed)
             {
-                switch (index)
-                {
-                    case 0: E0 = 0; break;
-
-                    case 1: E1 = 0; break;
-
-                    case 2: E2 = 0; break;
-
-                    case 3: E3 = 0; break;
-
-                    case 4: E4 = 0; break;
-
-                    case 5: E5 = 0; break;
-                }
+                BaseSpeed = speed;
             }
 
-            public void ApplyDecay(double dt, double tau0)
+            // Exponentially decay the jerk over time
+            public void DecayJerk(double dt, double timeConstant)
             {
-                // Using local tau scaling as discussed
-                E0 *= Math.Exp(-dt / (tau0 * 1));
-                E1 *= Math.Exp(-dt / (tau0 * 2));
-                E2 *= Math.Exp(-dt / (tau0 * 4));
-                E3 *= Math.Exp(-dt / (tau0 * 8));
-                E4 *= Math.Exp(-dt / (tau0 * 16));
-                E5 *= Math.Exp(-dt / (tau0 * 32));
+                JerkStrain *= Math.Pow(0.5, dt / timeConstant);
             }
-
-            public double RhythmScaleTotalEnergy => E0 + E1 + E2 + E3 + E4 + E5;
         }
 
         private readonly OsuDifficultyHitObject? lastLastDifficultyObject;

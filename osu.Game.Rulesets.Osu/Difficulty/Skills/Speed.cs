@@ -20,6 +20,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     public class Speed : HarmonicSkill
     {
         private double skillMultiplier => 1.16;
+        private double speedFControlNorm => 1.5;
 
         private readonly List<double> sliderStrains = new List<double>();
 
@@ -44,9 +45,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             currentDifficulty *= decay;
             currentDifficulty += SpeedEvaluator.EvaluateDifficultyOf(current) * (1 - decay) * skillMultiplier;
 
-            double currentRhythm = RhythmEvaluator.EvaluateDifficultyOf(current);
+            double currentFingerControl = FingerControlEvaluator.EvaluateDifficultyOf(current);
 
-            double totalDifficulty = currentDifficulty * currentRhythm;
+            // Since currentDifficulty and currentFingerControl now have comparable values (usually less than an order of magnitude away), the generalized p-norm can be used to sum them
+            double totalDifficulty = DifficultyCalculationUtils.Norm(speedFControlNorm, [currentDifficulty, currentFingerControl]);
 
             if (current.BaseObject is Slider)
                 sliderStrains.Add(totalDifficulty);

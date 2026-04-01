@@ -27,6 +27,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
                 return 0;
 
             var osuCurrObj = (OsuDifficultyHitObject)current;
+            var osuPrevObj = (OsuDifficultyHitObject?)current.Previous(0);
+
+            // Update the current object's finger control history based on the previous one (needed for later finger control calculation)
+            if (osuPrevObj != null)
+            {
+                osuCurrObj.History = osuPrevObj.History;
+            }
 
             double strainTime = osuCurrObj.AdjustedDeltaTime;
             double doubletapness = 1.0 - osuCurrObj.GetDoubletapness((OsuDifficultyHitObject?)osuCurrObj.Next(0));
@@ -42,6 +49,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             double difficulty = (1 + speedBonus) * 1000 / strainTime;
 
             difficulty *= highBpmBonus(osuCurrObj.AdjustedDeltaTime);
+
+            // Place the object's speed difficulty in its history (needed for later finger control calculation)
+            osuCurrObj.History.BaseSpeed = difficulty;
 
             // Apply penalty if there's doubletappable doubles
             return difficulty * doubletapness;
