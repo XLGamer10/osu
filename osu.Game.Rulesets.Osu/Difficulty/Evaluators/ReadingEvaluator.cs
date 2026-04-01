@@ -15,9 +15,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
     {
         private const double reading_window_size = 3000; // 3 seconds
         private const double distance_influence_threshold = OsuDifficultyHitObject.NORMALISED_DIAMETER * 1.5; // 1.5 circles distance between centers
-        private const double minimum_distance_buff = OsuDifficultyHitObject.NORMALISED_DIAMETER * 4.50; // start buffing jumps for hidden from a certain distance onward
-        private const double hidden_very_long_distance_nerf = 200; // the higher the number, the less impact high distances have on the buff, pair an increase with a decrease in hidden_distance_buff
-        private const double hidden_distance_buff = 3.0;
+        private const double minimum_distance_buff = OsuDifficultyHitObject.NORMALISED_DIAMETER * 4.75; // start buffing jumps for hidden from a certain distance onward
+        private const double hidden_very_long_distance_nerf = 425; // the higher the number, the less impact high distances have on the buff, pair an increase with a decrease in hidden_distance_buff
+        private const double hidden_distance_buff = 3.2;
         private const double hidden_multiplier = 0.28;
         private const double density_multiplier = 2.4;
         private const double density_difficulty_base = 2.5;
@@ -135,10 +135,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                                       * DifficultyCalculationUtils.Smootherstep(densityFactor, 6000, 1750);
 
             double buffedDistance = Math.Max(currObj.LazyJumpDistance, minimum_distance_buff) - minimum_distance_buff;
-            double distanceFactor = (buffedDistance - Math.Atan(buffedDistance)) * densityInfluence;
+            double distanceFactor = (buffedDistance - Math.Atan(0.9 * buffedDistance)) * densityInfluence;
 
             double inherentHiddenDifficulty = (preemptFactor + densityFactor) * constantAngleNerfFactor * velocity * 0.01;
-            double distanceHiddenDifficulty = Math.Log(hidden_very_long_distance_nerf * distanceFactor * Math.Sqrt(constantAngleNerfFactor * velocity) * 0.01 + 1) * hidden_distance_buff;
+            double distanceHiddenDifficulty = Math.Log(hidden_very_long_distance_nerf * distanceFactor * Math.Sqrt(constantAngleNerfFactor) * 0.01 + 1) * hidden_distance_buff;
 
             // Apply a soft cap to general HD reading to account for partial memorization
             double hiddenDifficulty = (Math.Pow(inherentHiddenDifficulty, 0.4) + Math.Pow(distanceHiddenDifficulty, 0.6)) * hidden_multiplier;
