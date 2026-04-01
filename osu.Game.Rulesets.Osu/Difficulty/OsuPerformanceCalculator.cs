@@ -292,6 +292,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             // This percentage only considers HitCircles of any value - in this part of the calculation we focus on hitting the timing hit window.
             double amountHitObjectsWithAccuracy = attributes.HitCircleCount;
+
             if (!usingClassicSliderAccuracy || usingScoreV2)
                 amountHitObjectsWithAccuracy += attributes.SliderCount;
             else
@@ -301,6 +302,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
                 // If amount of circles is too small - also add sliders, because UR is calculated according to sliders too
                 double circlesRatio = (double)attributes.HitCircleCount / (attributes.HitCircleCount + attributes.SliderCount);
+
                 if (circlesRatio < 0.25)
                 {
                     amountHitObjectsWithAccuracy += attributes.SliderCount * (1 - circlesRatio / 0.25);
