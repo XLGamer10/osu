@@ -12,6 +12,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
     public static class AgilityEvaluator
     {
         private const double distance_cap = OsuDifficultyHitObject.NORMALISED_DIAMETER * 1.25; // 1.25 circles distance between centers
+        private const double wide_angle_multiplier = 1.10;
 
         /// <summary>
         /// Evaluates the difficulty of fast aiming
@@ -23,7 +24,41 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
             var osuCurrObj = (OsuDifficultyHitObject)current;
             var osuPrevObj = current.Index > 0 ? (OsuDifficultyHitObject)current.Previous(0) : null;
+            var osuPrevObj1 = current.Index > 1 ? (OsuDifficultyHitObject)current.Previous(1) : null;
 
+            double currDeltaTime = osuCurrObj.AdjustedDeltaTime;
+
+            if (withCheesability)
+            {
+                currDeltaTime += osuCurrObj.ExtraDeltaTime;
+            }
+
+            double strain = getStrain(osuCurrObj, osuPrevObj, withCheesability);
+
+            if (osuCurrObj.Angle != null && osuPrevObj != null)
+            {
+                double prevDeltaTime = osuCurrObj.AdjustedDeltaTime;
+
+                if (withCheesability)
+                {
+                    prevDeltaTime += osuCurrObj.ExtraDeltaTime;
+                }
+
+                double wideAngleBonus = SnapAimEvaluator.CalcWideAngleBonus(osuCurrObj.Angle.Value);
+                wideAngleBonus *= DifficultyCalculationUtils.ReverseLerp(prevDeltaTime, currDeltaTime * 0.5, currDeltaTime * 0.75);
+
+                double strainPrev = getStrain(osuPrevObj, osuPrevObj1, withCheesability);
+                strain += Math.Min(strain, strainPrev) * wideAngleBonus * wide_angle_multiplier;
+            }
+
+            strain *= Math.Pow(osuCurrObj.SmallCircleBonus, 1.5);
+            strain *= highBpmBonus(currDeltaTime);
+
+            return strain * DifficultyCalculationUtils.Smootherstep(osuCurrObj.LazyJumpDistance, 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
+        }
+
+        private static double getStrain(OsuDifficultyHitObject osuCurrObj, OsuDifficultyHitObject? osuPrevObj, bool withCheesability)
+        {
             double currDeltaTime = osuCurrObj.AdjustedDeltaTime;
 
             if (withCheesability)
@@ -33,18 +68,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
             double travelDistance = osuPrevObj?.LazyTravelDistance ?? 0;
             double distance = travelDistance + osuCurrObj.LazyJumpDistance;
-
             double distanceScaled = Math.Min(distance, distance_cap) / distance_cap;
-
-            double strain = distanceScaled * 1000 / currDeltaTime;
-
-            strain *= osuCurrObj.SmallCircleBonus;
-
-            strain *= highBpmBonus(currDeltaTime);
-
-            return strain * DifficultyCalculationUtils.Smootherstep(distance, 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
+            return distanceScaled * 1000 / currDeltaTime;
         }
 
-        private static double highBpmBonus(double ms) => 1 / (1 - Math.Pow(0.15, ms / 1000));
+        private static double highBpmBonus(double ms) => 1 / (1 - Math.Pow(0.2, ms / 1000));
     }
 }
