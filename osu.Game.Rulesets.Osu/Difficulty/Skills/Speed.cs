@@ -23,6 +23,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double burstMultiplier => 2.45;
         private double streamMultiplier => 0.2;
         private double staminaMultiplier => 0.05;
+        private double fControlMultiplier => 1.00;
         private double meanExponent => 1.25;
         private double speedFControlNorm => 1.5;
 
@@ -55,7 +56,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         protected override double ObjectDifficultyOf(DifficultyHitObject current)
         {
             currentBurstStrain *= strainDecayBurst(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
-            currentFingerControl = FingerControlEvaluator.EvaluateDifficultyOf(current);
+            currentFingerControl = FingerControlEvaluator.EvaluateDifficultyOf(current) * fControlMultiplier;
             currentBurstStrain += SpeedEvaluator.EvaluateDifficultyOf(current) * burstMultiplier;
 
             double totalBurstStrain = DifficultyCalculationUtils.Norm(speedFControlNorm, [currentBurstStrain, currentFingerControl]);
