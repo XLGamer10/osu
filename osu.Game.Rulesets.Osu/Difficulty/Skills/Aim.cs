@@ -8,11 +8,11 @@ using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Skills;
 using osu.Game.Rulesets.Difficulty.Utils;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Scoring;
 using osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Rulesets.Osu.Objects;
-using osu.Game.Rulesets.Scoring;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 {
@@ -34,6 +34,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double inaccuraciesWhileCheesing;
         private double maxStrain;
         private double currentStrain;
+        private double preservedStrain;
 
         private double skillMultiplierSnap => 500.0;
         private double skillMultiplierAgility => 10.4;
@@ -52,10 +53,27 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         }
 
         private double strainDecay(double ms) => Math.Pow(0.2, ms / 1000);
+        private double preservedStrainDecay(double ms) => Math.Pow(0.4, ms / 1000);
 
         protected override double StrainValueAt(DifficultyHitObject current)
         {
             double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
+            double preservedDecay = preservedStrainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
+
+            double deltaDifferenceEpsilon = ((OsuDifficultyHitObject)current).HitWindow(HitResult.Great) * 0.3;
+
+            // if we speed up - aim strain should get preserved until we slow back down
+            if (current.DeltaTime - (current.Previous(0)?.DeltaTime ?? current.DeltaTime) < -deltaDifferenceEpsilon)
+            {
+                preservedStrain = Math.Max(currentStrain, preservedStrain * preservedDecay);
+            }
+
+            // we slow back down, so add back the preserved strain and reset preserved strain
+            if (current.DeltaTime - (current.Previous(0)?.DeltaTime ?? current.DeltaTime) > deltaDifferenceEpsilon)
+            {
+                currentStrain = Math.Max(currentStrain, preservedStrain * preservedDecay);
+                preservedStrain = 0;
+            }
 
             double snapDifficulty = SnapAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders, WithCheesability) * skillMultiplierSnap;
             double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current, WithCheesability) * skillMultiplierAgility;
