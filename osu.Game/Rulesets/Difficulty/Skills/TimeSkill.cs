@@ -34,14 +34,9 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         private readonly List<double> times = new List<double>();
 
         /// <summary>
-        /// List of calculated per-object snap probabilities, populated by Process
-        /// </summary>
-        protected readonly List<double> SnapProbabilities = new List<double>();
-
-        /// <summary>
         /// Returns the strain value at <see cref="DifficultyHitObject"/>. This value is calculated with or without respect to previous objects.
         /// </summary>
-        protected abstract (double currentStrain, double pSnap) StrainValueAt(DifficultyHitObject current);
+        protected abstract double StrainValueAt(DifficultyHitObject current);
 
         protected override double ProcessInternal(DifficultyHitObject current)
         {
@@ -49,13 +44,10 @@ namespace osu.Game.Rulesets.Difficulty.Skills
                 ? retry_cooldown_time + Math.Min(current.DeltaTime, max_delta_time)
                 : times.Last() + Math.Min(current.DeltaTime, max_delta_time));
 
-            var strainValues = StrainValueAt(current);
-            SnapProbabilities.Add(strainValues.pSnap);
-
-            return strainValues.currentStrain;
+            return StrainValueAt(current);
         }
 
-        protected abstract double HitProbability(double skill, double difficulty, double pSnap);
+        protected abstract double HitProbability(double skill, double difficulty);
 
         public override double DifficultyValue()
         {
@@ -88,7 +80,7 @@ namespace osu.Game.Rulesets.Difficulty.Skills
                 {
                     double deltaTime = n > 0 ? binList[n].Time - binList[n - 1].Time : binList[n].Time;
 
-                    hitProbabilityProduct *= Math.Pow(HitProbability(skill, binList[n].Difficulty, SnapProbabilities[n]), binList[n].NoteCount);
+                    hitProbabilityProduct *= Math.Pow(HitProbability(skill, binList[n].Difficulty), binList[n].NoteCount);
                     timeSpentRetrying += hitProbabilityProduct > 0 ? deltaTime / hitProbabilityProduct - deltaTime : double.PositiveInfinity;
                 }
             }
@@ -98,7 +90,7 @@ namespace osu.Game.Rulesets.Difficulty.Skills
                 {
                     double deltaTime = n > 0 ? times[n] - times[n - 1] : times[n];
 
-                    hitProbabilityProduct *= HitProbability(skill, ObjectDifficulties[n], SnapProbabilities[n]);
+                    hitProbabilityProduct *= HitProbability(skill, ObjectDifficulties[n]);
                     timeSpentRetrying += hitProbabilityProduct > 0 ? deltaTime / hitProbabilityProduct - deltaTime : double.PositiveInfinity;
                 }
             }
@@ -171,7 +163,7 @@ namespace osu.Game.Rulesets.Difficulty.Skills
                     for (int n = binList.Count - 1; n >= 0; n--)
                     {
                         double deltaTime = n > 0 ? binList[n].Time - binList[n - 1].Time : binList[n].Time;
-                        double missProbability = 1 - HitProbability(skill, binList[n].Difficulty, SnapProbabilities[n]);
+                        double missProbability = 1 - HitProbability(skill, binList[n].Difficulty);
 
                         // Add this bin's probabilities to track cumulative miss distribution from here to end
                         poiBin.AddBinnedProbabilities(missProbability, binList[n].NoteCount);
@@ -190,7 +182,7 @@ namespace osu.Game.Rulesets.Difficulty.Skills
                     for (int n = ObjectDifficulties.Count - 1; n >= 0; n--)
                     {
                         double deltaTime = n > 0 ? times[n] - times[n - 1] : times[n];
-                        double missProbability = 1 - HitProbability(skill, ObjectDifficulties[n], SnapProbabilities[n]);
+                        double missProbability = 1 - HitProbability(skill, ObjectDifficulties[n]);
                         poiBin.AddProbability(missProbability);
 
                         double missCountProb = poiBin.Cdf(missCount);
