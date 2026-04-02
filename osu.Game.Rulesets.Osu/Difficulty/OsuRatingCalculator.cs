@@ -15,11 +15,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private readonly Mod[] mods;
         private readonly int totalHits;
+        private readonly double overallDifficulty;
 
-        public OsuRatingCalculator(Mod[] mods, int totalHits)
+        public OsuRatingCalculator(Mod[] mods, int totalHits, double overallDifficulty)
         {
             this.mods = mods;
             this.totalHits = totalHits;
+            this.overallDifficulty = overallDifficulty;
         }
 
         public double ComputeAimRating(double aimDifficultyValue)
@@ -85,6 +87,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             }
 
             double ratingMultiplier = 1.0;
+
+            ratingMultiplier *= 0.75 + Math.Pow(Math.Max(0, overallDifficulty), 2.2) / 800;
 
             //commented this out as od 11.11 ss comes out to being multiplied by ~1
             //ratingMultiplier *= 0.75 + Math.Pow(Math.Max(0, overallDifficulty), 2.2) / 800;
