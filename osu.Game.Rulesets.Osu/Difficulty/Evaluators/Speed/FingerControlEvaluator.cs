@@ -43,7 +43,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             if (osuPrevObj.BaseObject is Slider)
             {
                 applySliderPenalty = true;
-                sliderJumpDist = osuCurrObj.AdjustedDeltaTime;
+                sliderJumpDist = osuCurrObj.GetDistance(true);
             }
             else if (osuPrevPrevObj?.BaseObject is Slider)
             {
