@@ -127,6 +127,42 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         /// </summary>
         public double SmallCircleBonus { get; private set; }
 
+        /// <summary>
+        /// Accessor for FingerControlHistory.
+        /// </summary>
+        public FingerControlHistory History = new FingerControlHistory();
+
+        /// <summary>
+        /// Struct containing the rhythm history of a given <see cref="OsuDifficultyHitObject"/>.
+        /// This rhythm history consists of the previous note's exponentially decaying jerk strain.
+        /// </summary>
+        public struct FingerControlHistory
+        {
+            // Store the SpeedEvaluator's calculated Power and for the next object's jerk delta
+            public double BaseSpeed;
+
+            // Consider jerk as its own "strain", since it propagates through objects
+            // We do not wish to consider it its own *skill* yet, we still want to keep it as a factor of speed itself
+            public double JerkStrain;
+
+            public FingerControlHistory()
+            {
+                BaseSpeed = 0;
+                JerkStrain = 0;
+            }
+
+            public void PushSpeed(double speed)
+            {
+                BaseSpeed = speed;
+            }
+
+            // Exponentially decay the jerk over time
+            public void DecayJerk(double dt, double timeConstant)
+            {
+                JerkStrain *= Math.Pow(0.5, dt / timeConstant);
+            }
+        }
+
         private readonly OsuDifficultyHitObject? lastLastDifficultyObject;
         private readonly OsuDifficultyHitObject? lastDifficultyObject;
 

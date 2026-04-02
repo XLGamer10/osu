@@ -21,14 +21,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     {
         private double totalMultiplier => 0.80;
         private double burstMultiplier => 2.45;
+        private double fControlMultiplier => 1.1;
         private double streamMultiplier => 0.2;
         private double staminaMultiplier => 0.05;
         private double meanExponent => 1.25;
+        private double speedFControlNorm => 1.5;
 
         private double currentBurstStrain;
         private double currentStreamStrain;
         private double currentStaminaStrain;
-        private double currentRhythm;
+        private double currentFControl;
 
         private readonly List<double> sliderStrains = new List<double>();
         public readonly bool WithoutStamina;
@@ -54,10 +56,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         protected override double ObjectDifficultyOf(DifficultyHitObject current)
         {
             currentBurstStrain *= strainDecayBurst(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
-            currentRhythm = RhythmEvaluator.EvaluateDifficultyOf(current);
+            currentFControl = FingerControlEvaluator.EvaluateDifficultyOf(current) * fControlMultiplier;
             currentBurstStrain += SpeedEvaluator.EvaluateDifficultyOf(current) * burstMultiplier;
 
-            double totalBurstStrain = currentBurstStrain * currentRhythm;
+            double totalBurstStrain = DifficultyCalculationUtils.Norm(speedFControlNorm, [currentBurstStrain * currentFControl]);
 
             if (WithoutStamina)
             {
