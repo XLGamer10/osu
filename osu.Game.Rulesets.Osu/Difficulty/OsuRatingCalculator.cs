@@ -27,7 +27,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (mods.Any(m => m is OsuModAutopilot))
                 return 0;
 
-            double aimRating = Math.Pow(aimDifficultyValue, 0.70) * 0.0138;
+            double aimRating = Math.Pow(aimDifficultyValue, 0.71) * 0.01235;
 
             if (mods.Any(m => m is OsuModRelax))
                 aimRating *= 0.9;

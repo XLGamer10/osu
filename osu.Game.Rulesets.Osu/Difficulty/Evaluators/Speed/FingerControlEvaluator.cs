@@ -32,7 +32,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             var osuPrevPrevObj = (OsuDifficultyHitObject?)current.Previous(1);
 
             double doubletapness = 1.0 - osuPrevObj?.GetDoubletapness(osuCurrObj) ?? 0;
-            double epsilon = current.HitWindow(HitResult.Great) * 0.3;
+            double epsilon = current.HitWindow(HitResult.Great) * 0.15;
 
             // Do not calculate a jerk if there is no previous note
             if (osuPrevObj == null) return 0;
@@ -58,7 +58,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 
             // Save all relevant hit object information to history
             osuCurrObj.History.PushSpeed(osuCurrObj.History.BaseSpeed);
-            double smallOddPatternPenalty = nerfSmallOdds(osuCurrObj, osuPrevObj, epsilon); // Immediately calculate an odd pattern penalty
+            double smallOddPatternPenalty = nerfSmallOdds(osuCurrObj, epsilon); // Immediately calculate an odd pattern penalty
 
             // Exponentially decay the jerk strain
             osuCurrObj.History.DecayJerk(osuCurrObj.AdjustedDeltaTime, jerk_time_constant);
@@ -108,7 +108,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 
         // Function for nerfing small odd-numbered patterns (triples, 5-bursts and 7-bursts)
         // Simultaneously handles odd-numbered patterns embedded within slider rhythms (such as slider into a double -> functionally a triple)
-        private static double nerfSmallOdds(OsuDifficultyHitObject osuCurrObj, OsuDifficultyHitObject osuPrevObj, double epsilon)
+        private static double nerfSmallOdds(OsuDifficultyHitObject osuCurrObj, double epsilon)
         {
             var phrase = new List<OsuDifficultyHitObject>();
 
