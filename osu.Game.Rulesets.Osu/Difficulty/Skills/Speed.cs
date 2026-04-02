@@ -19,16 +19,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// </summary>
     public class Speed : HarmonicSkill
     {
-        private double totalMultiplier => 0.85;
+        private double totalMultiplier => 0.80;
         private double burstMultiplier => 2.45;
-        //private double streamMultiplier => 0.2;
-        private double staminaMultiplier => 0.05;
+        private double streamMultiplier => 0.2;
+        private double staminaMultiplier => 0.03;
         private double fControlMultiplier => 0.90;
         private double meanExponent => 1.25;
         private double speedFControlNorm => 1.5;
 
         private double currentBurstStrain;
-        //private double currentStreamStrain;
+        private double currentStreamStrain;
         private double currentStaminaStrain;
         private double currentFingerControl;
 
@@ -45,7 +45,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         protected override double DecayExponent => 0.9;
 
         private double strainDecayBurst(double ms) => Math.Pow(0.1, ms / 1000);
-        //private double strainDecayStream(double ms) => Math.Pow(0.01, Math.Pow(ms / 1000, 1.6));
+        private double strainDecayStream(double ms) => Math.Pow(0.01, Math.Pow(ms / 1000, 1.6));
 
         private double strainDecayStamina(double ms, double staminaValue)
         {
@@ -73,15 +73,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             double staminaValue = StaminaEvaluator.EvaluateDifficultyOf(current);
 
-            //currentStreamStrain *= strainDecayStream(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
-            //currentStreamStrain += staminaValue * streamMultiplier;
+            currentStreamStrain *= strainDecayStream(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
+            currentStreamStrain += staminaValue * streamMultiplier;
 
             currentStaminaStrain *= strainDecayStamina(((OsuDifficultyHitObject)current).AdjustedDeltaTime, staminaValue * staminaMultiplier);
             currentStaminaStrain += staminaValue * staminaMultiplier;
 
             double totalValue = DifficultyCalculationUtils.Norm(meanExponent,
                 totalBurstStrain,
-                //currentStreamStrain,
+                currentStreamStrain,
                 currentStaminaStrain) * totalMultiplier;
 
             if (current.BaseObject is Slider)
