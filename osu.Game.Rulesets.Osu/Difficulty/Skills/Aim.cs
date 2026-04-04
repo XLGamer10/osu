@@ -30,14 +30,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double currentStrain;
 
-        protected override double HarmonicScale => 100;
-        protected override double DecayExponent => 0.9;
-        protected override double WeightExponent => 1.5;
+        protected override double HarmonicScale => 35;
+        protected override double DecayExponent => 0.90;
 
         private double skillMultiplierSnap => 70.9;
-        private double skillMultiplierAgility => 2.09;
-        private double skillMultiplierFlow => 226.7;
-        private double skillMultiplierTotal => 0.68;
+        private double skillMultiplierAgility => 2.35;
+        private double skillMultiplierFlow => 243.0;
+        private double skillMultiplierTotal => 1.12;
         private double meanExponent => 1.2;
 
         private readonly List<double> sliderStrains = new List<double>();
