@@ -35,9 +35,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         protected override double WeightExponent => 1.5;
 
         private double skillMultiplierSnap => 70.9;
-        private double skillMultiplierAgility => 2.35;
-        private double skillMultiplierFlow => 243.0;
-        private double skillMultiplierTotal => 0.51;
+        private double skillMultiplierAgility => 2.09;
+        private double skillMultiplierFlow => 226.7;
+        private double skillMultiplierTotal => 0.68;
         private double meanExponent => 1.2;
 
         private readonly List<double> sliderStrains = new List<double>();
