@@ -12,7 +12,6 @@ using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Mods;
-using osu.Game.Rulesets.Osu.Objects;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 {
@@ -36,8 +35,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double skillMultiplierFlow => 243.0;
         private double skillMultiplierTotal => 1.12;
         private double meanExponent => 1.2;
+        private double strainDecayDenominator => 1000;
         private double harmonicScale => 20;
         private double decayExponent => 0.9;
+        private double flowDecayDenominator => 10;
 
         /// <summary>
         /// The number of sections with the highest strains, which the peak strain reductions will apply to.
@@ -52,15 +53,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private readonly List<double> sliderStrains = new List<double>();
 
-        private double strainDecay(double ms) => Math.Pow(0.2, ms / 1000);
+        private double strainDecay(double ms) => Math.Pow(0.3, ms / 1000);
 
         protected override double CalculateInitialStrain(double time, DifficultyHitObject current) =>
             currentStrain * strainDecay(time - current.Previous(0).StartTime);
 
         protected override double StrainValueAt(DifficultyHitObject current)
         {
-            double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
-
             double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current) * skillMultiplierAgility;
             double flowDifficulty = FlowAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierFlow;
 
@@ -80,15 +79,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             double flowHarmonicScale = 1 + harmonicScale / (1 + flowDifficulty);
             double flowHarmonicDecay = flowHarmonicScale / (Math.Pow(flowDifficulty, decayExponent) + flowHarmonicScale);
-            decay *= flowHarmonicDecay;
+            double decay = 1 - strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime) * flowHarmonicDecay;
 
             currentStrain *= decay;
-            currentStrain += agilityDifficulty * (1 - decay);
+            currentStrain += Math.Sqrt(agilityDifficulty) * (1 - decay);
 
-            if (current.BaseObject is Slider)
-                sliderStrains.Add(currentStrain);
-
-            return currentStrain;
+            return totalDifficulty * 1 + currentStrain;
         }
 
         private double calculateTotalValue(double agilityDifficulty, double flowDifficulty)

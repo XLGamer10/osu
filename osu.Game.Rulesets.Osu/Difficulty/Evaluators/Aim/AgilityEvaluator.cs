@@ -33,6 +33,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             return strain *= highBpmBonus(osuCurrObj.AdjustedDeltaTime);
         }
 
-        private static double highBpmBonus(double ms) => 1 / (1 - Math.Pow(0.2, ms / 1000));
+        private static double highBpmBonus(double ms) => 1 / (1 - Math.Pow(0.3, ms / 1000));
     }
 }
