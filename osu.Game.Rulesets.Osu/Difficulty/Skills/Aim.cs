@@ -36,6 +36,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double skillMultiplierFlow => 243.0;
         private double skillMultiplierTotal => 1.12;
         private double meanExponent => 1.2;
+        private double harmonicScale => 20;
+        private double decayExponent => 0.9;
 
         /// <summary>
         /// The number of sections with the highest strains, which the peak strain reductions will apply to.
@@ -59,13 +61,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         {
             double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
 
-            double snapDifficulty = SnapAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierSnap;
             double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current) * skillMultiplierAgility;
             double flowDifficulty = FlowAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierFlow;
 
             if (Mods.Any(m => m is OsuModTouchDevice))
             {
-                snapDifficulty = Math.Pow(snapDifficulty, 0.89);
+                agilityDifficulty = Math.Pow(agilityDifficulty, 0.89);
                 // we don't adjust agility here since agility represents TD difficulty in a decent enough way
                 flowDifficulty = Math.Pow(flowDifficulty, 1.1);
             }
@@ -75,10 +76,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 agilityDifficulty *= 0.3;
             }
 
-            double totalDifficulty = calculateTotalValue(snapDifficulty, agilityDifficulty, flowDifficulty);
+            double totalDifficulty = calculateTotalValue(agilityDifficulty, flowDifficulty);
+
+            double flowHarmonicScale = 1 + harmonicScale / (1 + flowDifficulty);
+            double flowHarmonicDecay = flowHarmonicScale / (Math.Pow(flowDifficulty, decayExponent) + flowHarmonicScale);
+            decay *= flowHarmonicDecay;
 
             currentStrain *= decay;
-            currentStrain += totalDifficulty * (1 - decay);
+            currentStrain += agilityDifficulty * (1 - decay);
 
             if (current.BaseObject is Slider)
                 sliderStrains.Add(currentStrain);
@@ -86,17 +91,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return currentStrain;
         }
 
-        private double calculateTotalValue(double snapDifficulty, double agilityDifficulty, double flowDifficulty)
+        private double calculateTotalValue(double agilityDifficulty, double flowDifficulty)
         {
-            // We compare flow to combined snap and agility because snap by itself doesn't have enough difficulty to be above flow on streams
-            // Agility on the other hand is supposed to measure the rate of cursor velocity changes while snapping
-            // So snapping every circle on a stream requires an enormous amount of agility at which point it's easier to flow
-            double combinedSnapDifficulty = DifficultyCalculationUtils.Norm(meanExponent, snapDifficulty, agilityDifficulty);
-
-            double pSnap = calculateSnapFlowProbability(flowDifficulty / combinedSnapDifficulty);
+            double pSnap = calculateSnapFlowProbability(flowDifficulty / agilityDifficulty);
             double pFlow = 1 - pSnap;
 
-            double totalDifficulty = combinedSnapDifficulty * pSnap + flowDifficulty * pFlow;
+            double totalDifficulty = agilityDifficulty * pSnap + flowDifficulty * pFlow;
 
             double totalStrain = totalDifficulty * skillMultiplierTotal;
 
