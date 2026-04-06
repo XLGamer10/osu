@@ -30,14 +30,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double currentStrain;
 
-        private double skillMultiplierSnap => 70.9;
-        private double skillMultiplierAgility => 2.35;
+        private double skillMultiplierAgility => 4.35;
         private double skillMultiplierFlow => 243.0;
         private double skillMultiplierTotal => 1.12;
-        private double meanExponent => 1.2;
         private double strainDecayDenominator => 1000;
-        private double harmonicScale => 20;
-        private double decayExponent => 0.9;
         private double flowDecayDenominator => 10;
 
         /// <summary>
@@ -53,10 +49,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private readonly List<double> sliderStrains = new List<double>();
 
-        private double strainDecay(double ms) => Math.Pow(0.3, ms / 1000);
+        private double strainDecay(double ms, double denominator) => Math.Pow(0.3, ms / denominator);
 
         protected override double CalculateInitialStrain(double time, DifficultyHitObject current) =>
-            currentStrain * strainDecay(time - current.Previous(0).StartTime);
+            currentStrain * strainDecay(time - current.Previous(0).StartTime, strainDecayDenominator);
 
         protected override double StrainValueAt(DifficultyHitObject current)
         {
@@ -77,9 +73,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             double totalDifficulty = calculateTotalValue(agilityDifficulty, flowDifficulty);
 
-            double flowHarmonicScale = 1 + harmonicScale / (1 + flowDifficulty);
-            double flowHarmonicDecay = flowHarmonicScale / (Math.Pow(flowDifficulty, decayExponent) + flowHarmonicScale);
-            double decay = 1 - strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime) * flowHarmonicDecay;
+            double flowDecayMult = strainDecay(flowDifficulty, flowDecayDenominator);
+            double decay = 1 - strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime, strainDecayDenominator) * flowDecayMult;
 
             currentStrain *= decay;
             currentStrain += Math.Sqrt(agilityDifficulty) * (1 - decay);
