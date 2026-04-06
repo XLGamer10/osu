@@ -30,9 +30,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double currentStrain;
 
-        private double skillMultiplierAgility => 4.35;
-        private double skillMultiplierFlow => 243.0;
-        private double skillMultiplierTotal => 1.12;
+        private double skillMultiplierAgility => 5.15;
+        private double skillMultiplierFlow => 230.0;
+        private double skillMultiplierTotal => 5.12;
         private double strainDecayDenominator => 1000;
         private double flowDecayDenominator => 10;
 
@@ -74,12 +74,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             double totalDifficulty = calculateTotalValue(agilityDifficulty, flowDifficulty);
 
             double flowDecayMult = strainDecay(flowDifficulty, flowDecayDenominator);
-            double decay = 1 - strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime, strainDecayDenominator) * flowDecayMult;
+            double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime, strainDecayDenominator) * (1 - flowDecayMult);
 
             currentStrain *= decay;
             currentStrain += Math.Sqrt(agilityDifficulty) * (1 - decay);
 
-            return totalDifficulty * 1 + currentStrain;
+            return totalDifficulty * (1 + currentStrain);
         }
 
         private double calculateTotalValue(double agilityDifficulty, double flowDifficulty)
