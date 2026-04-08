@@ -35,8 +35,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
                 currVelocity = Math.Max(currVelocity, sliderDistance / osuCurrObj.AdjustedDeltaTime);
             }
 
-            double prevVelocity = prevDistance / osuLastObj.AdjustedDeltaTime;
-
             double flowDifficulty = currVelocity;
 
             // Apply high circle size bonus to the base velocity.
