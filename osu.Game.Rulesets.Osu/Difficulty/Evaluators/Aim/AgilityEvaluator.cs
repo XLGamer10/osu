@@ -11,7 +11,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 {
     public static class AgilityEvaluator
     {
-        private const double distance_cap = OsuDifficultyHitObject.NORMALISED_DIAMETER * 1.25; // 1.25 circles distance between centers
+        private const double distance_cap = OsuDifficultyHitObject.NORMALISED_RADIUS; // 1.25 circles distance between centers
         private const double stop_exponent = 1; //In case we want to scale jerk difficulty of snapping at a different rate than d/t^2
         private const double start_exponent = 1; //In case we want to scale jerk difficulty of accelerating at a different rate than d/t^2
 
@@ -37,7 +37,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
             strain *= highBpmBonus(osuCurrObj.AdjustedDeltaTime);
 
-            return strain * DifficultyCalculationUtils.Smootherstep(distance, 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
+            return strain;
         }
 
         public static double EvaluateJerkingOf(DifficultyHitObject current, bool withSliderTravelDistance) // NOT FINISHED!!!!!
