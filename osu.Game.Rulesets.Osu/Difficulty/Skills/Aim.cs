@@ -62,7 +62,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             double snapDifficulty = SnapAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierSnap;
             double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current) * skillMultiplierAgility;
-            double jerkDifficulty = AgilityEvaluator.EvaluateJerkingOf(current, IncludeSliders) * skillMultiplierJerk;
+            double jerkDifficulty = AgilityEvaluator.EvaluateJerkingOfSnap(current, IncludeSliders) * skillMultiplierJerk;
             double flowDifficulty = FlowAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierFlow;
 
             double totalDifficulty = calculateTotalValue(snapDifficulty, agilityDifficulty, jerkDifficulty, flowDifficulty);

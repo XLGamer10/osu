@@ -14,6 +14,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
         private const double distance_cap = OsuDifficultyHitObject.NORMALISED_RADIUS; // 1.25 circles distance between centers
         private const double stop_exponent = 1; //In case we want to scale jerk difficulty of snapping at a different rate than d/t^2
         private const double start_exponent = 1; //In case we want to scale jerk difficulty of accelerating at a different rate than d/t^2
+        private const double jerk_change_cap = 2; //
 
         /// <summary>
         /// Evaluates the difficulty of fast aiming
@@ -35,12 +36,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
             strain *= Math.Pow(osuCurrObj.SmallCircleBonus, 1.5);
 
-            strain *= highBpmBonus(osuCurrObj.AdjustedDeltaTime);
+            strain *= highBpmBonus(osuCurrObj.AdjustedDeltaTime, osuCurrObj.LazyJumpDistance);
 
             return strain;
         }
 
-        public static double EvaluateJerkingOf(DifficultyHitObject current, bool withSliderTravelDistance) // NOT FINISHED!!!!!
+        public static double EvaluateJerkingOfSnap(DifficultyHitObject current, bool withSliderTravelDistance) // NOT FINISHED!!!!!
         {
             if (current.BaseObject is Spinner || current.Index <= 1 || current.Previous(0).BaseObject is Spinner)
                 return 0;
@@ -60,21 +61,32 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
                 currVelocity = Math.Max(currVelocity, sliderDistance / osuCurrObj.AdjustedDeltaTime);
             }
 
-            double prevDistance = withSliderTravelDistance ? osuLastObj.LazyJumpDistance : osuLastObj.JumpDistance;
-            double prevVelocity = prevDistance / osuLastObj.AdjustedDeltaTime;
+            double nextDistance = withSliderTravelDistance ? osuNextObj.LazyJumpDistance : osuNextObj.JumpDistance;
+            double nextVelocity = nextDistance / osuNextObj.AdjustedDeltaTime;
+
+            if (osuCurrObj.BaseObject is Slider && withSliderTravelDistance)
+            {
+                double sliderDistance = osuCurrObj.LazyTravelDistance + osuNextObj.LazyJumpDistance;
+                nextVelocity = Math.Max(nextVelocity, sliderDistance / osuNextObj.AdjustedDeltaTime);
+            }
+
+            double stopDifficulty = currVelocity * Math.Pow(highBpmBonus(osuCurrObj.AdjustedDeltaTime, osuCurrObj.LazyJumpDistance), stop_exponent);
             double startDifficulty = 0;
 
-            double stopDifficulty = currVelocity * Math.Pow(highBpmBonus(osuCurrObj.AdjustedDeltaTime), stop_exponent);
-
-            if (osuCurrObj.Angle != null && osuLastObj.Angle != null && osuNextObj.Angle != null)
+            if (osuCurrObj.Angle != null && osuNextObj.Angle != null)
             {
-                double currAngleAt = osuNextObj.Angle.Value;
-                startDifficulty = osuCurrObj.AdjustedDeltaTime / osuNextObj.AdjustedDeltaTime;
+                double currAngleAt = double.DegreesToRadians(osuNextObj.Angle.Value);
+                double tangentialVectorInfluence = Math.Cos(currAngleAt);
+                double tangentialNextVelocity = nextVelocity * tangentialVectorInfluence;
+                //tangentialVectorInfluence *= tangentialVectorInfluence < 0 ? -2 : 1; // Buff tangential jerk direction switch after snap (linear jump buff)
+                double tangentialDifficulty = tangentialNextVelocity;
+                tangentialDifficulty *= Math.Min(currVelocity / tangentialNextVelocity, jerk_change_cap);
             }
 
             return stopDifficulty + startDifficulty;
         }
 
-        private static double highBpmBonus(double ms) => 1 / (1 - Math.Pow(0.2, ms / 1000));
+        private static double highBpmBonus(double ms, double distance) => 1 / (1 - Math.Pow(0.2, ms / 1000))
+                                                                          * DifficultyCalculationUtils.Smootherstep(distance, 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
     }
 }
