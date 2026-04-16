@@ -54,6 +54,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             return difficulty * doubletapness;
         }
 
-        private static double highBpmBonus(double ms, OsuDifficultyConstants tuning) => 1 / (1 - Math.Pow(tuning.SpeedHighBpmBonusBase, Math.Pow(ms / 1000, tuning.SpeedHighBpmExponent)));
+        //private static double highBpmBonus(double ms, OsuDifficultyConstants tuning) => 1 / (1 - Math.Pow(tuning.SpeedHighBpmBonusBase, Math.Pow(ms / 1000, tuning.SpeedHighBpmExponent)));
     }
 }

@@ -149,7 +149,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double aimValue = computeAimValue(score, osuAttributes);
             double speedValue = computeSpeedValue(score, osuAttributes);
-            double accuracyValue = computeAccuracyValue(score) * tuning.AccuracyPerformanceScale;
+            double accuracyValue = computeAccuracyValue(score, tuning);
 
             double readingValue = computeReadingValue(osuAttributes);
             double flashlightValue = computeFlashlightValue(score, osuAttributes);
@@ -278,12 +278,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return speedValue;
         }
 
-        private double computeAccuracyValue(ScoreInfo score)
+        private double computeAccuracyValue(ScoreInfo score, OsuDifficultyConstants tuning)
         {
             if (score.Mods.Any(h => h is OsuModRelax) || deviation == null)
                 return 0.0;
 
-            double accuracyValue = 120 * Math.Pow(7.5 / (double)deviation, 2);
+            double accuracyValue = tuning.AccuracyPerformanceMult * Math.Pow(tuning.AccuracyPerformanceBase / (double)deviation, tuning.AccuracyPerformanceExponent);
 
             // Increasing the accuracy value by object count for Blinds isn't ideal, so the minimum buff is given.
             if (score.Mods.Any(m => m is OsuModBlinds))

@@ -12,17 +12,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 {
     public static class FingerControlEvaluator
     {
-        private const double jerk_balancing_factor = 1.0; // Increase this value to make values more based
-        private const double jerk_time_constant = 400.0; // 400ms - Time constant for the "strain" decay of the jerk
-        private const double compression_exponent = 0.5; // Reflects the nonlinear perception of finger control effort, more relevant at higher BPMs
-        private const double gallop_midpoint = 37.0; // 37ms - arbitrary midpoint where a player is considered to be galloping
-
         /// <summary>
         /// Calculates a finger control value for the difficulty of the tap associated with historic speed data of the current <see cref="OsuDifficultyHitObject"/>.
         /// Uses jerk (derivative of acceleration/force) to model muscle confusion, which is defined here as the derivative of Speed values for the object.
         /// Note that this specifically does NOT model cognitive difficulty and is very much only a measurement of physical finger control.
         /// </summary>
-        public static double EvaluateDifficultyOf(DifficultyHitObject current)
+        public static double EvaluateDifficultyOf(DifficultyHitObject current, OsuDifficultyConstants tuning)
         {
             if (current.BaseObject is Spinner)
                 return 0;
@@ -61,34 +56,34 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             double smallOddPatternPenalty = nerfSmallOdds(osuCurrObj, epsilon); // Immediately calculate an odd pattern penalty
 
             // Exponentially decay the jerk strain
-            osuCurrObj.History.DecayJerk(osuCurrObj.AdjustedDeltaTime, jerk_time_constant);
+            osuCurrObj.History.DecayJerk(osuCurrObj.AdjustedDeltaTime, tuning.FingerControlJerkTimeConstant);
 
             // Calculate the jerk of the required motion based off of current and previous speed difficulty, scaled by DeltaTime
-            double jerkDifficulty = calculateEffectiveJerk(osuCurrObj, currentSpeed, previousSpeed, osuCurrObj.AdjustedDeltaTime, epsilon, applySliderPenalty, sliderJumpDist);
+            double jerkDifficulty = calculateEffectiveJerk(osuCurrObj, currentSpeed, previousSpeed, osuCurrObj.AdjustedDeltaTime, epsilon, applySliderPenalty, sliderJumpDist, tuning);
             double addedJerkStrain = Math.Abs(jerkDifficulty) * doubletapness * smallOddPatternPenalty;
             osuCurrObj.History.JerkStrain += addedJerkStrain;
 
-            double totalFingerControl = (osuCurrObj.History.JerkStrain * jerk_balancing_factor);
+            double totalFingerControl = osuCurrObj.History.JerkStrain * tuning.FingerControlJerkBalancingFactor;
 
             return totalFingerControl;
         }
 
         // Function that calculates the (compressed) derivative of two Speed values of two hit objects
         // Includes an explicit doubletap and gallop nerf, as well as a from-slider nerf dependent on lazy jump distance from sliderend to next object
-        private static double calculateEffectiveJerk(OsuDifficultyHitObject osuCurrObj, double currentSpeed, double prevSpeed, double dt, double epsilon, bool fromSlider, double sliderJumpDist)
+        private static double calculateEffectiveJerk(OsuDifficultyHitObject osuCurrObj, double currentSpeed, double prevSpeed, double dt, double epsilon, bool fromSlider, double sliderJumpDist, OsuDifficultyConstants tuning)
         {
             // If the pattern is unambiguously doubletappable, skip the jerk calculation
             if (dt < epsilon) return 0;
 
             // Smooth gallop factor: 1.0 if the notes are very fast (mashing), 0.0 if slow
             // This behaves slightly differently from GetDoubletapness but produces decent results in simplified finger control
-            double gallopFactor = 1.0 / (1.0 + Math.Exp(0.5 * (dt - gallop_midpoint)));
+            double gallopFactor = 1.0 / (1.0 + Math.Exp(0.5 * (dt - tuning.FingerControlGallopMidpoint)));
 
             double rawRateOfChange = (currentSpeed - prevSpeed) / ((dt + epsilon) / 1000.0); // Smooth with epsilon
             double sign = Math.Sign(rawRateOfChange);
 
             // Compress the value to avoid double-counting at high BPM
-            double jerk = sign * Math.Pow(Math.Abs(rawRateOfChange), compression_exponent);
+            double jerk = sign * Math.Pow(Math.Abs(rawRateOfChange), tuning.FingerControlCompressionExponent);
             jerk *= 1.0 - gallopFactor;
 
             // Apply a smooth penalty to bursts starting close to a slider end

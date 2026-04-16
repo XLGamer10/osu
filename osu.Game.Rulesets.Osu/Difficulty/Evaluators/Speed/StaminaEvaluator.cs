@@ -11,7 +11,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 {
     public static class StaminaEvaluator
     {
-        public static double EvaluateDifficultyOf(DifficultyHitObject current)
+        public static double EvaluateDifficultyOf(DifficultyHitObject current, OsuDifficultyConstants tuning)
         {
             if (current.BaseObject is Spinner)
                 return 0;
@@ -20,8 +20,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 
             double bpmBonus = 0.0;
 
-            if (DifficultyCalculationUtils.MillisecondsToBPM(osuCurrObj.AdjustedDeltaTime) > 240)
-                bpmBonus = Math.Pow((DifficultyCalculationUtils.BPMToMilliseconds(240) - osuCurrObj.AdjustedDeltaTime) / 16.5, 1.1);
+            if (DifficultyCalculationUtils.MillisecondsToBPM(osuCurrObj.AdjustedDeltaTime) > tuning.StaminaBaseBpm)
+                bpmBonus = Math.Pow((DifficultyCalculationUtils.BPMToMilliseconds(tuning.StaminaBaseBpm) - osuCurrObj.AdjustedDeltaTime)
+                                    / tuning.StaminaSpeedBalanceFactor, tuning.StaminaSpeedExponent);
 
             double finalValue = (1 + bpmBonus) * 1000 / osuCurrObj.AdjustedDeltaTime;
 

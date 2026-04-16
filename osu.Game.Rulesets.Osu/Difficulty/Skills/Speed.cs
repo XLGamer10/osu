@@ -50,7 +50,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         protected override double ObjectDifficultyOf(DifficultyHitObject current)
         {
             currentBurstStrain *= strainDecayBurst(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
-            currentFingerControl = FingerControlEvaluator.EvaluateDifficultyOf(current, tuning) * tuning.SpeedFControlMultiplier;
+            currentFingerControl = FingerControlEvaluator.EvaluateDifficultyOf(current, tuning);
             currentBurstStrain += SpeedEvaluator.EvaluateDifficultyOf(current, tuning) * tuning.SpeedBurstMultiplier;
 
             double totalBurstStrain = DifficultyCalculationUtils.Norm(tuning.SpeedFControlNorm, [currentBurstStrain, currentFingerControl]);

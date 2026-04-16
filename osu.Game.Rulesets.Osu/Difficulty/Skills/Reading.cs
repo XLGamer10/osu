@@ -40,7 +40,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             currentDifficulty *= decay;
 
-            currentDifficulty += ReadingEvaluator.EvaluateDifficultyOf(current, hasHiddenMod, tuning) * tuning.ReadingSkillMultiplier;
+            currentDifficulty += ReadingEvaluator.EvaluateDifficultyOf(current, hasHiddenMod, tuning) * (1 - decay) * tuning.ReadingSkillMultiplier;
 
             return currentDifficulty;
         }

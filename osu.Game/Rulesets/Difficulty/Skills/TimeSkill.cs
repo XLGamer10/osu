@@ -20,9 +20,9 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         private const double ms_to_minutes = 1.0 / 60000.0;
 
         // FC time specific constants
-        private const double time_threshold_minutes = 24;
-        private const double max_delta_time = 5000;
-        private const double retry_cooldown_time = 60000;
+        protected virtual double TimeThresholdMinutes => 24;
+        protected virtual double MaxDeltaTime => 5000;
+        protected virtual double RetryCooldownTime => 60000;
 
         // Bin specific constants
         private const double bin_threshold_note_count = difficulty_bin_count * time_bin_count;
@@ -41,8 +41,8 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         protected override double ProcessInternal(DifficultyHitObject current)
         {
             times.Add(current.Index == 0
-                ? retry_cooldown_time + Math.Min(current.DeltaTime, max_delta_time)
-                : times.Last() + Math.Min(current.DeltaTime, max_delta_time));
+                ? RetryCooldownTime + Math.Min(current.DeltaTime, MaxDeltaTime)
+                : times.Last() + Math.Min(current.DeltaTime, MaxDeltaTime));
 
             return StrainValueAt(current);
         }
@@ -63,7 +63,7 @@ namespace osu.Game.Rulesets.Difficulty.Skills
             }
 
             // Lower bound and upper bound are generally unimportant
-            return RootFinding.FindRootExpand(skill => timeSpentRetryingAtSkill(skill, binList) - time_threshold_minutes, 0, 10);
+            return RootFinding.FindRootExpand(skill => timeSpentRetryingAtSkill(skill, binList) - TimeThresholdMinutes, 0, 10);
         }
 
         private double timeSpentRetryingAtSkill(double skill, List<Bin>? binList = null)
@@ -151,7 +151,7 @@ namespace osu.Game.Rulesets.Difficulty.Skills
 
             IterativePoissonBinomial poiBin = new IterativePoissonBinomial();
 
-            return Math.Max(0, RootFinding.FindRootExpand(x => retryTimeRequiredToObtainMissCount(x) - time_threshold_minutes, -50, 1000, accuracy: 0.01));
+            return Math.Max(0, RootFinding.FindRootExpand(x => retryTimeRequiredToObtainMissCount(x) - TimeThresholdMinutes, -50, 1000, accuracy: 0.01));
 
             double retryTimeRequiredToObtainMissCount(double missCount)
             {

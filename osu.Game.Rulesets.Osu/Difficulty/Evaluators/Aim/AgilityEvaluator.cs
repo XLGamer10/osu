@@ -12,7 +12,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
     public static class AgilityEvaluator
     {
         private const double distance_cap = OsuDifficultyHitObject.NORMALISED_DIAMETER * 1.2; // 1.25 circles distance between centers
-        private const double wide_angle_multiplier = 1.10;
 
         /// <summary>
         /// Evaluates the difficulty of fast aiming
@@ -48,11 +47,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
                 wideAngleBonus *= DifficultyCalculationUtils.ReverseLerp(prevDeltaTime, currDeltaTime * 0.5, currDeltaTime * 0.75);
 
                 double strainPrev = getStrain(osuPrevObj, osuPrevObj1, withCheesability);
-                strain += Math.Min(strain, strainPrev) * wideAngleBonus * wide_angle_multiplier;
+                strain += Math.Min(strain, strainPrev) * wideAngleBonus * tuning.AgilityWideAngleMultiplier;
             }
 
             strain *= Math.Pow(osuCurrObj.SmallCircleBonus, 1.5);
-            return strain * highBpmBonus(currDeltaTim, tuning);
+            return strain * highBpmBonus(currDeltaTime, tuning);
         }
 
         private static double getStrain(OsuDifficultyHitObject osuCurrObj, OsuDifficultyHitObject? osuPrevObj, bool withCheesability)

@@ -25,13 +25,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         public readonly bool WithCheesability;
         private readonly OsuDifficultyConstants tuning;
 
-        public Aim(Mod[] mods, OsuDifficultyConstants tuning, bool includeSliders)
+        public Aim(Mod[] mods, OsuDifficultyConstants tuning, bool includeSliders, bool withCheesability)
             : base(mods)
         {
             this.tuning = tuning;
             IncludeSliders = includeSliders;
             WithCheesability = withCheesability;
         }
+
+        protected override double TimeThresholdMinutes => tuning.AimTimeThresholdMinutes;
+        protected override double MaxDeltaTime => tuning.AimMaxDeltaTime;
+        protected override double RetryCooldownTime => tuning.AimRetryCooldownTime;
 
         private double inaccuraciesWhileCheesing;
         private double maxStrain;
@@ -104,7 +108,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             {
                 // we don't adjust agility here since agility represents TD difficulty in a decent enough way
                 snapDifficulty = Math.Pow(snapDifficulty, 0.89);
-                combinedSnapDifficulty = DifficultyCalculationUtils.Norm(combinedSnapNormExponent, snapDifficulty, agilityDifficulty);
+                combinedSnapDifficulty = DifficultyCalculationUtils.Norm(tuning.AimCombinedSnapNormExponent, snapDifficulty, agilityDifficulty);
             }
 
             if (Mods.Any(m => m is OsuModRelax))
