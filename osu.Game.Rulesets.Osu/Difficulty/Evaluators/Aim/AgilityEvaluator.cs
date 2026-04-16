@@ -3,6 +3,7 @@
 
 using System;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
+using osu.Game.Rulesets.Difficulty.Utils;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Objects;
 
@@ -43,7 +44,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
                     prevDeltaTime += osuCurrObj.ExtraDeltaTime;
                 }
 
-                double wideAngleBonus = SnapAimEvaluator.CalcWideAngleBonus(osuCurrObj.Angle.Value);
+                double wideAngleBonus = SnapAimEvaluator.CalcAngleWideness(osuCurrObj.Angle.Value);
                 wideAngleBonus *= DifficultyCalculationUtils.ReverseLerp(prevDeltaTime, currDeltaTime * 0.5, currDeltaTime * 0.75);
 
                 double strainPrev = getStrain(osuPrevObj, osuPrevObj1, withCheesability);
