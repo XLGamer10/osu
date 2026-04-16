@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -6,7 +6,6 @@ using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Utils;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Objects;
-using osu.Game.Rulesets.Scoring;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
 {
@@ -25,13 +24,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
                 return 0;
 
             var osuCurrObj = (OsuDifficultyHitObject)current;
+            var osuPrevObj = (OsuDifficultyHitObject?)current.Previous(0);
+
+            // Update the current object's finger control history based on the previous one (needed for later finger control calculation)
+            if (osuPrevObj != null)
+            {
+                osuCurrObj.History = osuPrevObj.History;
+            }
 
             double strainTime = osuCurrObj.AdjustedDeltaTime;
             double doubletapness = 1.0 - osuCurrObj.GetDoubletapness((OsuDifficultyHitObject?)osuCurrObj.Next(0));
-
-            // Cap deltatime to the OD 300 hitwindow.
-            // 0.93 is derived from making sure 260bpm OD8 streams aren't nerfed harshly, whilst 0.92 limits the effect of the cap.
-            strainTime /= Math.Clamp((strainTime / osuCurrObj.HitWindow(HitResult.Great)) / 0.93, 0.92, 1);
 
             // speedBonus will be 0.0 for BPM < 200
             double speedBonus = 0.0;
@@ -43,7 +45,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
             // Base difficulty with all bonuses
             double difficulty = (1 + speedBonus) * 1000 / strainTime;
 
-            difficulty *= highBpmBonus(osuCurrObj.AdjustedDeltaTime, tuning);
+            //difficulty *= highBpmBonus(osuCurrObj.AdjustedDeltaTime, tuning);
+
+            // Place the object's speed difficulty in its history (needed for later finger control calculation)
+            osuCurrObj.History.BaseSpeed = difficulty;
 
             // Apply penalty if there's doubletappable doubles
             return difficulty * doubletapness;
