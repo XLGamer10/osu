@@ -3,7 +3,6 @@
 
 using System;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
-using osu.Game.Rulesets.Difficulty.Utils;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Objects;
 
@@ -11,7 +10,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 {
     public static class AgilityEvaluator
     {
-        private const double distance_cap = OsuDifficultyHitObject.NORMALISED_DIAMETER * 1.25; // 1.25 circles distance between centers
+        private const double distance_cap = OsuDifficultyHitObject.NORMALISED_DIAMETER * 1.2; // 1.25 circles distance between centers
         private const double wide_angle_multiplier = 1.10;
 
         /// <summary>
@@ -52,9 +51,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             }
 
             strain *= Math.Pow(osuCurrObj.SmallCircleBonus, 1.5);
-            strain *= highBpmBonus(currDeltaTime);
-
-            return strain * DifficultyCalculationUtils.Smootherstep(osuCurrObj.GetDistance(true), 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
+            return strain * highBpmBonus(currDeltaTime);
         }
 
         private static double getStrain(OsuDifficultyHitObject osuCurrObj, OsuDifficultyHitObject? osuPrevObj, bool withCheesability)
