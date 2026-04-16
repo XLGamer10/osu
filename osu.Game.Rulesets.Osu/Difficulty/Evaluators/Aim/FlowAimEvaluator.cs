@@ -24,7 +24,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             var osuLastLastObj = (OsuDifficultyHitObject)current.Previous(1);
 
             double currDistance = withSliderTravelDistance ? osuCurrObj.LazyJumpDistance : osuCurrObj.JumpDistance;
-            double prevDistance = withSliderTravelDistance ? osuLastObj.LazyJumpDistance : osuLastObj.JumpDistance;
 
             double currVelocity = currDistance / osuCurrObj.AdjustedDeltaTime;
 
@@ -46,9 +45,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
             if (current.Index > 2)
             {
-                double o1 = calculateOverlapFactor(osuCurrObj, osuLastObj);
-                double o2 = calculateOverlapFactor(osuCurrObj, osuLastLastObj);
-                double o3 = calculateOverlapFactor(osuLastObj, osuLastLastObj);
+                double o1 = CalculateOverlapFactor(osuCurrObj, osuLastObj);
+                double o2 = CalculateOverlapFactor(osuCurrObj, osuLastLastObj);
+                double o3 = CalculateOverlapFactor(osuLastObj, osuLastLastObj);
 
                 overlappedNotesWeight = 1 - o1 * o2 * o3;
             }
@@ -61,10 +60,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
                 flowDifficulty += osuCurrObj.TravelDistance / osuCurrObj.TravelTime;
             }
 
-            return flowDifficulty;
+            return flowDifficulty ;
         }
 
-        private static double calculateOverlapFactor(OsuDifficultyHitObject first, OsuDifficultyHitObject second)
+        public static double CalculateOverlapFactor(OsuDifficultyHitObject first, OsuDifficultyHitObject second)
         {
             var firstBase = (OsuHitObject)first.BaseObject;
             var secondBase = (OsuHitObject)second.BaseObject;

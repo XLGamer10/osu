@@ -30,8 +30,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double currentStrain;
 
-        private double skillMultiplierAgility => 5.15;
-        private double skillMultiplierFlow => 230.0;
+        private double skillMultiplierAgility => 1.9;
+        private double skillMultiplierFlow => 12.0;
         private double skillMultiplierTotal => 5.12;
         private double strainDecayDenominator => 1000;
         private double flowDecayDenominator => 10;
@@ -56,7 +56,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         protected override double StrainValueAt(DifficultyHitObject current)
         {
-            double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current) * skillMultiplierAgility;
+            double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierAgility;
             double flowDifficulty = FlowAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierFlow;
 
             if (Mods.Any(m => m is OsuModTouchDevice))
@@ -71,7 +71,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 agilityDifficulty *= 0.3;
             }
 
-            double totalDifficulty = calculateTotalValue(agilityDifficulty, flowDifficulty);
+            double totalDifficulty = (agilityDifficulty + flowDifficulty) * skillMultiplierTotal;
 
             double flowDecayMult = strainDecay(flowDifficulty, flowDecayDenominator);
             double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime, strainDecayDenominator) * (1 - flowDecayMult);
@@ -80,38 +80,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             currentStrain += Math.Sqrt(agilityDifficulty) * (1 - decay);
 
             return totalDifficulty * (1 + currentStrain);
-        }
-
-        private double calculateTotalValue(double agilityDifficulty, double flowDifficulty)
-        {
-            double pSnap = calculateSnapFlowProbability(flowDifficulty / agilityDifficulty);
-            double pFlow = 1 - pSnap;
-
-            double totalDifficulty = agilityDifficulty * pSnap + flowDifficulty * pFlow;
-
-            double totalStrain = totalDifficulty * skillMultiplierTotal;
-
-            return totalStrain;
-        }
-
-        // A function that turns the ratio of snap : flow into the probability of snapping/flowing
-        // It has the constraints:
-        // P(snap) + P(flow) = 1 (the object is always either snapped or flowed)
-        // P(snap) = f(snap/flow), P(flow) = f(flow/snap) (ie snap and flow are symmetric and reversible)
-        // Therefore: f(x) + f(1/x) = 1
-        // 0 <= f(x) <= 1 (cannot have negative or greater than 100% probability of snapping or flowing)
-        // This logistic function is a solution, which fits nicely with the general idea of interpolation and provides a tuneable constant
-        private static double calculateSnapFlowProbability(double ratio)
-        {
-            const double k = 7.27;
-
-            if (ratio == 0)
-                return 0;
-
-            if (double.IsNaN(ratio))
-                return 1;
-
-            return DifficultyCalculationUtils.Logistic(-k * Math.Log(ratio));
         }
 
         public double GetDifficultSliders()
