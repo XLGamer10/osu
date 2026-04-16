@@ -13,7 +13,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
     public static class AgilityEvaluator
     {
         private const double stop_exponent = 1; //In case we want to scale jerk difficulty of snapping at a different rate than d/t^2
-        private const double start_exponent = 2; //In case we want to scale jerk difficulty of accelerating at a different rate than d/t^2
+        private const double start_exponent = 1; //In case we want to scale jerk difficulty of accelerating at a different rate than d/t^2
         private const double jerk_change_cap = 2; //
         private const double tangential_mult = 1;
         private const double normal_mult = 4;
@@ -75,7 +75,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
                 double normalDifficulty = normalNextVelocity * normal_mult;
 
                 startDifficulty = Math.Sqrt(normalDifficulty * normalDifficulty + tangentialDifficulty * tangentialDifficulty)
-                                  * -(Math.Cos(currAngleAt) / 4 - 1.5)
+                                  * -(Math.Cos(currAngleAt) - 2)
                                   * Math.Pow(highBpmBonus(osuNextObj.AdjustedDeltaTime, osuNextObj.LazyJumpDistance), start_exponent);
             }
 

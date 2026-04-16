@@ -30,8 +30,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double currentStrain;
 
-        private double skillMultiplierAgility => 1.9;
-        private double skillMultiplierFlow => 12.0;
+        private double skillMultiplierAgility => 6.7;
+        private double skillMultiplierFlow => 12.5;
         private double skillMultiplierTotal => 5.12;
         private double strainDecayDenominator => 1000;
         private double flowDecayDenominator => 10;
