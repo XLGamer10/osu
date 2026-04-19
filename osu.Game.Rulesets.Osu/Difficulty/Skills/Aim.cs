@@ -30,6 +30,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         }
 
         private double currentStrain;
+        private double currentStaminaStrain;
 
         private double skillMultiplierSnap => 70.9;
         private double skillMultiplierAgility => 2.35;
@@ -63,7 +64,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current) * skillMultiplierAgility;
             double flowDifficulty = FlowAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierFlow;
 
-            double totalDifficulty = calculateTotalValue(snapDifficulty, agilityDifficulty, flowDifficulty);
+            double totalDifficulty = calculateTotalValue(snapDifficulty, agilityDifficulty, flowDifficulty, decay);
 
             currentStrain *= decay;
             currentStrain += totalDifficulty * (1 - decay);
@@ -74,7 +75,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return currentStrain;
         }
 
-        private double calculateTotalValue(double snapDifficulty, double agilityDifficulty, double flowDifficulty)
+        private double calculateTotalValue(double snapDifficulty, double agilityDifficulty, double flowDifficulty, double decay)
         {
             // We compare flow to combined snap and agility because snap by itself doesn't have enough difficulty to be above flow on streams
             // Agility on the other hand is supposed to measure the rate of cursor velocity changes while snapping
@@ -97,9 +98,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 flowDifficulty *= 0.6;
             }
 
+            currentStaminaStrain *= decay;
+            currentStaminaStrain += (Math.Sqrt(combinedSnapDifficulty * pSnap) + Math.Log(flowDifficulty * pFlow + 1)) * (1 - decay);
+
             double totalDifficulty = combinedSnapDifficulty * pSnap + flowDifficulty * pFlow;
 
-            double totalStrain = totalDifficulty * skillMultiplierTotal;
+            double totalStrain = totalDifficulty * (Math.Log(currentStaminaStrain + 1) + 1) * skillMultiplierTotal;
 
             return totalStrain;
         }
