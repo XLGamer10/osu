@@ -24,12 +24,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             this.overallDifficulty = overallDifficulty;
         }
 
-        public double ComputeAimRating(double aimDifficultyValue)
+        public double ComputeAimRating(double aimDifficultyValue, OsuDifficultyConstants tuning)
         {
             if (mods.Any(m => m is OsuModAutopilot))
                 return 0;
 
-            double aimRating = Math.Pow(aimDifficultyValue, 0.71) * 0.01235;
+            double aimRating = Math.Pow(aimDifficultyValue, tuning.RatingAimExponent) * tuning.RatingAimMult;
 
             if (mods.Any(m => m is OsuModMagnetised))
             {

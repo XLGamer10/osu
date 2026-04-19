@@ -96,8 +96,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             var osuRatingCalculator = new OsuRatingCalculator(mods, totalHits, overallDifficulty);
 
-            double aimRating = osuRatingCalculator.ComputeAimRating(aimDifficultyValue);
-            double aimRatingCheesed = osuRatingCalculator.ComputeAimRating(cheesedAimDifficultyValue);
+            double aimRating = osuRatingCalculator.ComputeAimRating(aimDifficultyValue, tuning);
+            double aimRatingCheesed = osuRatingCalculator.ComputeAimRating(cheesedAimDifficultyValue, tuning);
             double speedRating = osuRatingCalculator.ComputeSpeedRating(speedDifficultyValue);
             double readingRating = osuRatingCalculator.ComputeReadingRating(readingDifficultyValue);
 

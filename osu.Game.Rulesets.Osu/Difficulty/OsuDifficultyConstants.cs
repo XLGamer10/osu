@@ -101,5 +101,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         public double AccuracyPerformanceMult { get; set; } = 120;
         public double AccuracyPerformanceBase { get; set; } = 7.5;
         public double AccuracyPerformanceExponent { get; set; } = 2;
+
+        // Rating calculator constants
+        public double RatingAimExponent { get; set; } = 0.71;
+        public double RatingAimMult { get; set; } = 0.01235;
     }
 }
