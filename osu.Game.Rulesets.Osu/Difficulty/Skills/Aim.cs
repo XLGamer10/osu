@@ -32,11 +32,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double currentStrain;
         private double currentStaminaStrain;
 
-        private double skillMultiplierSnap => 70.9;
-        private double skillMultiplierAgility => 2.35;
-        private double skillMultiplierFlow => 243.0;
+        private double skillMultiplierSnap => 63.2;
+        private double skillMultiplierAgility => 1.6;
+        private double skillMultiplierFlow => 233.0;
         private double skillMultiplierTotal => 1.12;
         private double combinedSnapNormExponent => 1.2;
+        private double staminaMultiplier => 0.05;
+        private double staminaExponent => 2;
 
         /// <summary>
         /// The number of sections with the highest strains, which the peak strain reductions will apply to.
@@ -52,6 +54,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private readonly List<double> sliderStrains = new List<double>();
 
         private double strainDecay(double ms) => Math.Pow(0.2, ms / 1000);
+        private double strainStaminaDecay(double ms) => Math.Pow(0.2, Math.Pow(ms, staminaExponent) / 1000);
 
         protected override double CalculateInitialStrain(double time, DifficultyHitObject current) =>
             currentStrain * strainDecay(time - current.Previous(0).StartTime);
@@ -59,12 +62,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         protected override double StrainValueAt(DifficultyHitObject current)
         {
             double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
+            double staminaDecay = strainStaminaDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
 
             double snapDifficulty = SnapAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierSnap;
             double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current) * skillMultiplierAgility;
             double flowDifficulty = FlowAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierFlow;
 
-            double totalDifficulty = calculateTotalValue(snapDifficulty, agilityDifficulty, flowDifficulty, decay);
+            double totalDifficulty = calculateTotalValue(snapDifficulty, agilityDifficulty, flowDifficulty, staminaDecay);
 
             currentStrain *= decay;
             currentStrain += totalDifficulty * (1 - decay);
@@ -75,7 +79,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return currentStrain;
         }
 
-        private double calculateTotalValue(double snapDifficulty, double agilityDifficulty, double flowDifficulty, double decay)
+        private double calculateTotalValue(double snapDifficulty, double agilityDifficulty, double flowDifficulty, double staminaDecay)
         {
             // We compare flow to combined snap and agility because snap by itself doesn't have enough difficulty to be above flow on streams
             // Agility on the other hand is supposed to measure the rate of cursor velocity changes while snapping
@@ -98,12 +102,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 flowDifficulty *= 0.6;
             }
 
-            currentStaminaStrain *= decay;
-            currentStaminaStrain += (Math.Sqrt(combinedSnapDifficulty * pSnap) + Math.Log(flowDifficulty * pFlow + 1)) * (1 - decay);
+            currentStaminaStrain *= staminaDecay;
+            currentStaminaStrain += ((Math.Pow(DifficultyCalculationUtils.Norm(combinedSnapNormExponent, 0.2 * snapDifficulty, agilityDifficulty) + 1, 0.75) - 1) * pSnap
+                                     + Math.Log(flowDifficulty + 1) * pFlow)
+                                    * (1 - staminaDecay);
 
             double totalDifficulty = combinedSnapDifficulty * pSnap + flowDifficulty * pFlow;
 
-            double totalStrain = totalDifficulty * (Math.Log(currentStaminaStrain + 1) + 1) * skillMultiplierTotal;
+            double totalStrain = totalDifficulty * (Math.Log(currentStaminaStrain + 1) * staminaMultiplier + 1) * skillMultiplierTotal;
 
             return totalStrain;
         }
