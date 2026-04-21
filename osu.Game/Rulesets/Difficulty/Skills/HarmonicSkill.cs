@@ -29,12 +29,6 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         /// </summary>
         protected virtual double DecayExponent => 0.9;
 
-        /// <summary>
-        /// Exponent that controls the weight of objects easier than the most difficult object.
-        /// A higher number means that easier objects will weight less.
-        /// </summary>
-        protected virtual double WeightExponent => 1;
-
         protected HarmonicSkill(Mod[] mods)
             : base(mods)
         {

@@ -36,7 +36,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double skillMultiplierSnap => 70.9;
         private double skillMultiplierAgility => 2.35;
         private double skillMultiplierFlow => 243.0;
-        private double skillMultiplierTotal => 1.12;
+        private double skillMultiplierTotal => 1.22;
         private double meanExponent => 1.2;
 
         private readonly List<double> sliderStrains = new List<double>();
@@ -139,6 +139,19 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             // Use a weighted sum of all notes. Constants are arbitrary and give nice values
             return sliderStrains.Sum(s => DifficultyCalculationUtils.Logistic(s / consistentTopNote, 0.88, 10, 1.1));
+        }
+
+        protected override void ApplyDifficultyTransformation(double[] difficulties)
+        {
+            const double weight_exponent = 0.5;
+            if (weight_exponent <= 0) return; // just in case someone puts in a negative number
+
+            double peakDifficulty = difficulties.Max();
+
+            for (int i = 0; i < difficulties.Length; i++)
+            {
+                difficulties[i] *= Math.Pow(difficulties[i], weight_exponent) / Math.Pow(peakDifficulty, weight_exponent);
+            }
         }
     }
 }
