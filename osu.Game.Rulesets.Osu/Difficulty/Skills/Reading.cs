@@ -46,7 +46,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return currentDifficulty;
         }
 
-        protected override void ApplyDifficultyTransformation(double[] difficulties, double[] deltaTimes)
+        protected override void ApplyDifficultyTransformation(double[] difficulties)
         {
             const double reduced_difficulty_base_line = 0.0; // Assume the first seconds are completely memorised
 

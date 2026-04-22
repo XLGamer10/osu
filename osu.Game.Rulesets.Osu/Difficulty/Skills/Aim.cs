@@ -32,7 +32,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         protected override double HarmonicScale => 35;
         protected override double DecayExponent => 0.90;
-        protected override double MaxDeltaTime => 5000;
 
         private double skillMultiplierSnap => 70.9;
         private double skillMultiplierAgility => 2.35;
@@ -143,18 +142,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return sliderStrains.Sum(s => DifficultyCalculationUtils.Logistic(s / consistentTopNote, 0.88, 10, 1.1));
         }
 
-        protected override void ApplyDifficultyTransformation(double[] difficulties, double[] deltaTimes)
+        protected override void ApplyDifficultyTransformation(double[] difficulties)
         {
             const double weight_exponent = 0.5;
-
             if (weight_exponent <= 0) return; // just in case someone puts in a negative number
 
-            double peakDifficulty = difficulties[0];
+            double peakDifficulty = difficulties.Max();
 
             for (int i = 0; i < difficulties.Length; i++)
             {
                 difficulties[i] *= Math.Pow(difficulties[i], weight_exponent) / Math.Pow(peakDifficulty, weight_exponent);
-                //* Math.Min(deltaTimes[i], MaxDeltaTime) / 400;
             }
         }
     }
