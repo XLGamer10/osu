@@ -58,23 +58,33 @@ namespace osu.Game.Rulesets.Difficulty.Skills
             // Notes with 0 difficulty are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
             // These notes will not contribute to the difficulty.
             double[] difficulties = ObjectDifficulties.Where(p => p > 0).ToArray();
+            double[] deltaTimes = DifficultyHitObject.DeltaTime;
 
             if (difficulties.Length == 0)
                 return 0;
 
+            Array.Sort(difficulties, deltaTimes);
+            Array.Reverse(difficulties);
+            Array.Reverse(deltaTimes);
+
             ApplyDifficultyTransformation(difficulties);
 
             double difficulty = 0;
+            double time = 0;
             int index = 0;
 
-            foreach (double note in difficulties.OrderDescending())
+            foreach (double note in difficulties[])
             {
+                double startTime = time;
+                double endTime = time + deltaTimes[index];
+
                 // Use a harmonic sum that considers each note of the map according to a predefined weight.
                 double weight = (1 + (HarmonicScale / (1 + index))) / (Math.Pow(index, DecayExponent) + 1 + (HarmonicScale / (1 + index)));
 
-                NoteWeightSum += weight;
-
                 difficulty += note * weight;
+
+                NoteWeightSum += weight;
+                time = endTime;
                 index += 1;
             }
 

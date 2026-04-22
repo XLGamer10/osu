@@ -38,6 +38,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double skillMultiplierFlow => 235.0;
         private double skillMultiplierTotal => 1.22;
         private double combinedSnapNormExponent => 1.2;
+        private double maxDeltaTime => 5000;
 
         private readonly List<double> sliderStrains = new List<double>();
 
@@ -59,7 +60,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (current.BaseObject is Slider)
                 sliderStrains.Add(currentStrain);
 
-            return currentStrain;
+            return currentStrain * Math.Min(current.DeltaTime, maxDeltaTime) / 400;
         }
 
         private double calculateTotalValue(double snapDifficulty, double agilityDifficulty, double flowDifficulty)
@@ -145,7 +146,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         protected override void ApplyDifficultyTransformation(double[] difficulties)
         {
             const double weight_exponent = 0.5;
-            const double max_delta_time = 5000;
 
             if (weight_exponent <= 0) return; // just in case someone puts in a negative number
 
