@@ -38,9 +38,15 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         /// <summary>
         ///
         /// </summary>
+        protected virtual double TimeInfluence => 2000000;
+
+        /// <summary>
+        ///
+        /// </summary>
         protected virtual bool UseTimeScaling => false;
 
         private readonly List<double> times = new List<double>();
+        private readonly List<double> timesSum = new List<double>();
 
         protected HarmonicSkill(Mod[] mods)
             : base(mods)
@@ -55,6 +61,7 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         protected sealed override double ProcessInternal(DifficultyHitObject current)
         {
             times.Add(Math.Min(current.DeltaTime, MaxDeltaTime));
+            timesSum.Add(current.StartTime);
 
             return ObjectDifficultyOf(current);
         }
@@ -75,7 +82,9 @@ namespace osu.Game.Rulesets.Difficulty.Skills
             // Notes with 0 difficulty are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
             // These notes will not contribute to the difficulty.
             double[] difficulties = ObjectDifficulties.Where(p => p > 0).ToArray();
+            double[] difficultiesCopy = difficulties;
             double[] deltaTimes = times.Where(p => p > 0).ToArray();
+            double[] startTimes = timesSum.Where(p => p > 0).ToArray();
 
             if (difficulties.Length == 0)
                 return 0;
@@ -83,8 +92,10 @@ namespace osu.Game.Rulesets.Difficulty.Skills
             ApplyDifficultyTransformation(difficulties);
 
             Array.Sort(difficulties, deltaTimes); // Sorts the difficulties and deltaTimes arrays according to difficulties
-            Array.Reverse(difficulties);
+            Array.Sort(difficultiesCopy, startTimes); // Sorts startTimes in the same way as the above
+            Array.Reverse(difficulties); // Descending order
             Array.Reverse(deltaTimes);
+            Array.Reverse(startTimes);
 
             double difficulty = 0;
             int index = 0;
@@ -94,7 +105,7 @@ namespace osu.Game.Rulesets.Difficulty.Skills
                 // Use a harmonic sum that considers each note of the map according to a predefined weight.
                 double weight = (1 + HarmonicScale / (1 + index)) / (Math.Pow(index, DecayExponent) + 1 + HarmonicScale / (1 + index));
 
-                if (UseTimeScaling == true) weight *= Math.Log(deltaTimes[index] + 10);
+                if (UseTimeScaling == true) weight *= Math.Log(deltaTimes[index] + 10) * Math.Log(startTimes[index] + TimeInfluence, TimeInfluence);
 
                 NoteWeightSum += weight;
 
