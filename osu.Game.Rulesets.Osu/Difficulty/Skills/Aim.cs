@@ -32,10 +32,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         protected override double HarmonicScale => 35;
         protected override double DecayExponent => 0.90;
+        protected override double MaxDeltaTime => 5000;
+        protected override bool UseTimeScaling => true;
 
-        private double skillMultiplierSnap => 70.9;
-        private double skillMultiplierAgility => 2.35;
-        private double skillMultiplierFlow => 235.0;
+        private double skillMultiplierSnap => 60;
+        private double skillMultiplierAgility => 4;
+        private double skillMultiplierFlow => 260.0;
         private double skillMultiplierTotal => 1.22;
         private double combinedSnapNormExponent => 1.2;
 
