@@ -32,13 +32,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         protected override double HarmonicScale => 35;
         protected override double DecayExponent => 0.90;
+        protected override double MaxDeltaTime => 5000;
 
         private double skillMultiplierSnap => 70.9;
         private double skillMultiplierAgility => 2.35;
         private double skillMultiplierFlow => 235.0;
         private double skillMultiplierTotal => 1.22;
         private double combinedSnapNormExponent => 1.2;
-        private double maxDeltaTime => 5000;
 
         private readonly List<double> sliderStrains = new List<double>();
 
@@ -60,7 +60,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (current.BaseObject is Slider)
                 sliderStrains.Add(currentStrain);
 
-            return currentStrain * Math.Min(current.DeltaTime, maxDeltaTime) / 400;
+            return currentStrain;
         }
 
         private double calculateTotalValue(double snapDifficulty, double agilityDifficulty, double flowDifficulty)
@@ -143,17 +143,18 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return sliderStrains.Sum(s => DifficultyCalculationUtils.Logistic(s / consistentTopNote, 0.88, 10, 1.1));
         }
 
-        protected override void ApplyDifficultyTransformation(double[] difficulties)
+        protected override void ApplyDifficultyTransformation(double[] difficulties, double[] deltaTimes)
         {
             const double weight_exponent = 0.5;
 
             if (weight_exponent <= 0) return; // just in case someone puts in a negative number
 
-            double peakDifficulty = difficulties.Max();
+            double peakDifficulty = difficulties[0];
 
             for (int i = 0; i < difficulties.Length; i++)
             {
                 difficulties[i] *= Math.Pow(difficulties[i], weight_exponent) / Math.Pow(peakDifficulty, weight_exponent);
+                //* Math.Min(deltaTimes[i], MaxDeltaTime) / 400;
             }
         }
     }

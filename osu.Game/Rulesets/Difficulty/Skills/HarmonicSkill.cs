@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Utils;
@@ -13,7 +14,7 @@ namespace osu.Game.Rulesets.Difficulty.Skills
     {
         /// <summary>
         /// The sum of note weights, calculated during summation.
-        /// Required for any calculations which need to normalise difficulty value.
+        /// Required for any calculations which need to normalize difficulty value.
         /// </summary>
         protected double NoteWeightSum;
 
@@ -29,6 +30,12 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         /// </summary>
         protected virtual double DecayExponent => 0.9;
 
+        protected virtual double MaxDeltaTime => 5000;
+
+        protected virtual bool UseTimeWeighting => false;
+
+        private readonly List<double> times = new List<double>();
+
         protected HarmonicSkill(Mod[] mods)
             : base(mods)
         {
@@ -40,13 +47,19 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         protected abstract double ObjectDifficultyOf(DifficultyHitObject current);
 
         protected sealed override double ProcessInternal(DifficultyHitObject current)
-            => ObjectDifficultyOf(current);
+        {
+            times.Add(current.Index == 0
+                ? Math.Min(current.DeltaTime, MaxDeltaTime)
+                : times.Last() + Math.Min(current.DeltaTime, MaxDeltaTime));
+
+            return ObjectDifficultyOf(current);
+        }
 
         /// <summary>
         /// Transforms the object difficulties specifically for final difficulty summation.
         /// This can be used to decrease weight of certain notes based on a skill-specific criteria.
         /// </summary>
-        protected virtual void ApplyDifficultyTransformation(double[] difficulties)
+        protected virtual void ApplyDifficultyTransformation(double[] difficulties, double[] deltaTimes)
         {
         }
 
@@ -58,33 +71,32 @@ namespace osu.Game.Rulesets.Difficulty.Skills
             // Notes with 0 difficulty are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
             // These notes will not contribute to the difficulty.
             double[] difficulties = ObjectDifficulties.Where(p => p > 0).ToArray();
-            double[] deltaTimes = DifficultyHitObject.DeltaTime;
+            double[] deltaTimes = times.Where(p => p > 0).ToArray();
 
             if (difficulties.Length == 0)
                 return 0;
 
-            Array.Sort(difficulties, deltaTimes);
+            Array.Sort(difficulties, deltaTimes); // sorts the difficulties and deltaTimes arrays according to difficulties
             Array.Reverse(difficulties);
             Array.Reverse(deltaTimes);
 
-            ApplyDifficultyTransformation(difficulties);
+            ApplyDifficultyTransformation(difficulties, deltaTimes);
 
             double difficulty = 0;
             double time = 0;
             int index = 0;
 
-            foreach (double note in difficulties[])
+            foreach (double note in difficulties)
             {
-                double startTime = time;
-                double endTime = time + deltaTimes[index];
-
                 // Use a harmonic sum that considers each note of the map according to a predefined weight.
-                double weight = (1 + (HarmonicScale / (1 + index))) / (Math.Pow(index, DecayExponent) + 1 + (HarmonicScale / (1 + index)));
+                double weight = (1 + (HarmonicScale / (1 + time))) / (Math.Pow(time, DecayExponent) + 1 + (HarmonicScale / (1 + time)));
 
                 difficulty += note * weight;
-
                 NoteWeightSum += weight;
-                time = endTime;
+
+                //time += UseTimeWeighting == true ? deltaTimes[index] : 1;
+                time += 1;
+
                 index += 1;
             }
 
