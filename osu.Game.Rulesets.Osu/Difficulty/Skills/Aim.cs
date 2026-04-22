@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using osu.Framework.Utils;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Skills;
 using osu.Game.Rulesets.Difficulty.Utils;
@@ -38,6 +39,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double skillMultiplierFlow => 230.0;
         private double skillMultiplierTotal => 0.9;
         private double combinedSnapNormExponent => 1.2;
+
+        /// <summary>
+        /// The number of sections with the highest strains, which the peak strain reductions will apply to.
+        /// This is done in order to decrease their impact on the overall difficulty of the map for this skill.
+        /// </summary>
+        private int reducedSectionTime => 4000;
+
+        /// <summary>
+        /// The baseline multiplier applied to the section with the biggest strain.
+        /// </summary>
+        private double reducedStrainBaseline => 0.727;
 
         private readonly List<double> sliderStrains = new List<double>();
 
@@ -115,6 +127,23 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return DifficultyCalculationUtils.Logistic(-k * Math.Log(ratio));
         }
 
+        public override double CountTopWeightedStrains(double difficultyValue)
+        {
+            if (ObjectDifficulties.Count == 0)
+                return 0.0;
+
+            if (NoteWeightSum == 0)
+                return 0.0;
+
+            double consistentTopStrain = difficultyValue / NoteWeightSum; // What would the top strain be if all strain values were identical
+
+            if (consistentTopStrain == 0)
+                return ObjectDifficulties.Count;
+
+            // Use a weighted sum of all strains. Constants are arbitrary and give nice values
+            return ObjectDifficulties.Sum(s => 1.1 / (1 + Math.Exp(-10 * (s / consistentTopStrain - 0.88))));
+        }
+
         public double GetDifficultSliders()
         {
             if (sliderStrains.Count == 0)
@@ -150,41 +179,64 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (ObjectDifficulties.Count == 0)
                 return 0;
 
-            // Sections with 0 strain are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
-            // These sections will not contribute to the difficulty.
-            var peaks = GetCurrentStrainPeaks().Where(p => p.Value > 0);
-
-            List<StrainPeak> strains = peaks.OrderByDescending(p => (p.Value, p.SectionLength)).ToList();
-
             double difficulty = 0;
-            int index = 0;
+            double index = 0;
 
-            for (int i = 0; i < strains.Count; i++)
+            var strains = getReducedStrainPeaks();
+
+            foreach (StrainPeak strain in strains)
             {
                 // Use a harmonic sum that considers each note of the map according to a predefined weight.
                 double weight = (1 + (HarmonicScale / (1 + index))) / (Math.Pow(index, DecayExponent) + 1 + (HarmonicScale / (1 + index)));
 
                 NoteWeightSum += weight;
 
-                difficulty += strains[i].Value * weight;
+                difficulty += strain.Value * weight;
                 index += 1;
             }
 
             return difficulty;
         }
 
-        public override double CountTopWeightedStrains(double difficultyValue)
+        /// <summary>
+        /// Returns a sorted enumerable of strain peaks with the highest values reduced.
+        /// </summary>
+        /// <returns></returns>
+        private IEnumerable<StrainPeak> getReducedStrainPeaks()
         {
-            if (ObjectDifficulties.Count == 0)
-                return 0.0;
+            // Sections with 0 strain are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
+            // These sections will not contribute to the difficulty.
+            var peaks = GetCurrentStrainPeaks().Where(p => p.Value > 0);
 
-            double consistentTopStrain = difficultyValue * (1 - DecayWeight); // What would the top strain be if all strain values were identical
+            List<StrainPeak> strains = peaks.OrderByDescending(p => p.Value).ToList();
 
-            if (consistentTopStrain == 0)
-                return ObjectDifficulties.Count;
+            const int chunk_size = 20;
+            double time = 0;
+            int strainsToRemove = 0; // All strains are removed at the end for optimization purposes
 
-            // Use a weighted sum of all strains. Constants are arbitrary and give nice values
-            return ObjectDifficulties.Sum(s => 1.1 / (1 + Math.Exp(-10 * (s / consistentTopStrain - 0.88))));
+            // We are reducing the highest strains first to account for extreme difficulty spikes
+            // Strains are split into 20ms chunks to try to mitigate inconsistencies caused by reducing strains
+            while (strains.Count > strainsToRemove && time < reducedSectionTime)
+            {
+                StrainPeak strain = strains[strainsToRemove];
+
+                for (double addedTime = 0; addedTime < strain.SectionLength; addedTime += chunk_size)
+                {
+                    double scale = Math.Log10(Interpolation.Lerp(1, 10, Math.Clamp((time + addedTime) / reducedSectionTime, 0, 1)));
+
+                    strains.Add(new StrainPeak(
+                        strain.Value * Interpolation.Lerp(reducedStrainBaseline, 1.0, scale),
+                        Math.Min(chunk_size, strain.SectionLength - addedTime)
+                    ));
+                }
+
+                time += strain.SectionLength;
+                strainsToRemove++;
+            }
+
+            strains.RemoveRange(0, strainsToRemove);
+
+            return strains.OrderByDescending(p => p.Value);
         }
     }
 }
