@@ -26,6 +26,24 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         /// </summary>
         protected virtual int MaxSectionLength => 400;
 
+        /// <summary>
+        /// The sum of note weights, calculated during summation.
+        /// Required for any calculations which need to normalise difficulty value.
+        /// </summary>
+        protected double NoteWeightSum;
+
+        /// <summary>
+        /// Scaling factor applied as HarmonicScale / (1 + index) during weight calculations.
+        /// A higher value will increase the influence of the hardest object difficulties during summation.
+        /// </summary>
+        protected virtual double HarmonicScale => 1.0;
+
+        /// <summary>
+        /// Exponent that controls the rate of which decay increases as the index increases.
+        /// Values closer to 1 decay faster whilst lower values give more weight to lower object difficulties.
+        /// </summary>
+        protected virtual double DecayExponent => 0.9;
+
         private double currentSectionPeak; // We also keep track of the peak strain in the current section.
         private double currentSectionBegin;
         private double currentSectionEnd;
