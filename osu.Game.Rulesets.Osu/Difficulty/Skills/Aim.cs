@@ -35,9 +35,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         protected override double DecayExponent => 0.9;
 
         private double skillMultiplierSnap => 78.9;
-        private double skillMultiplierAgility => 2.0;
-        private double skillMultiplierFlow => 230.0;
-        private double skillMultiplierTotal => 0.9;
+        private double skillMultiplierAgility => 2.1;
+        private double skillMultiplierFlow => 248.0;
+        private double skillMultiplierTotal => 0.82;
         private double combinedSnapNormExponent => 1.2;
 
         /// <summary>
@@ -135,7 +135,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (NoteWeightSum == 0)
                 return 0.0;
 
-            double consistentTopStrain = difficultyValue / NoteWeightSum; // What would the top strain be if all strain values were identical
+            double consistentTopStrain = difficultyValue * (1 - DecayWeight); // What would the top strain be if all strain values were identical
 
             if (consistentTopStrain == 0)
                 return ObjectDifficulties.Count;
@@ -165,7 +165,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (NoteWeightSum == 0)
                 return 0.0;
 
-            double consistentTopNote = difficultyValue / NoteWeightSum; // What would the top note be if all note values were identical
+            double consistentTopNote = difficultyValue * (1 - DecayWeight); // What would the top note be if all note values were identical
 
             if (consistentTopNote == 0)
                 return 0;
