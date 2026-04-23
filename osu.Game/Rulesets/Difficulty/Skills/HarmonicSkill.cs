@@ -38,7 +38,12 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         /// <summary>
         ///
         /// </summary>
-        protected virtual double TimeInfluence => 2000000;
+        protected virtual double DeltaTimeInfluence => 500;
+
+        /// <summary>
+        ///
+        /// </summary>
+        protected virtual double StartTimeInfluence => 2000000;
 
         /// <summary>
         ///
@@ -60,7 +65,8 @@ namespace osu.Game.Rulesets.Difficulty.Skills
 
         protected sealed override double ProcessInternal(DifficultyHitObject current)
         {
-            times.Add(Math.Min(current.DeltaTime, MaxDeltaTime));
+            double adjustedDeltaTime = Math.Max(current.DeltaTime, 25);
+            times.Add(Math.Min(adjustedDeltaTime, MaxDeltaTime));
             timesSum.Add(current.StartTime);
 
             return ObjectDifficultyOf(current);
@@ -105,7 +111,9 @@ namespace osu.Game.Rulesets.Difficulty.Skills
                 // Use a harmonic sum that considers each note of the map according to a predefined weight.
                 double weight = (1 + HarmonicScale / (1 + index)) / (Math.Pow(index, DecayExponent) + 1 + HarmonicScale / (1 + index));
 
-                if (UseTimeScaling == true) weight *= Math.Log(deltaTimes[index] + 10) * Math.Log(startTimes[index] + TimeInfluence, TimeInfluence);
+                if (UseTimeScaling == true)
+                    weight *= Math.Log(deltaTimes[index] + DeltaTimeInfluence, DeltaTimeInfluence)
+                              * Math.Log(startTimes[index] + StartTimeInfluence, StartTimeInfluence);
 
                 NoteWeightSum += weight;
 
