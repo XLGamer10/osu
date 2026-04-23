@@ -30,11 +30,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double currentStrain;
 
-        protected override double HarmonicScale => 35;
-        protected override double DecayExponent => 0.90;
+        protected override double HarmonicScale => 25;
+        protected override double DecayExponent => 1.0;
 
-        private double skillMultiplierSnap => 68.9;
-        private double skillMultiplierAgility => 5.05;
+        private double skillMultiplierSnap => 77.7;
+        private double skillMultiplierAgility => 3.85;
         private double skillMultiplierFlow => 307.0;
         private double skillMultiplierTotal => 1.12;
         private double combinedSnapNormExponent => 1.2;
@@ -126,7 +126,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 return 0;
 
             const double delta_time_chunk_size = 200;
-            const double start_time_influence = 2000000;
+            const double start_time_influence = 500000;
 
             // Notes with 0 difficulty are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
             // These notes will not contribute to the difficulty.
@@ -198,7 +198,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         protected override void ApplyDifficultyTransformation(double[] difficulties)
         {
-            const double weight_exponent = 0.5;
+            const double weight_exponent = 0.4;
             if (weight_exponent <= 0) return; // just in case someone puts in a negative number
 
             double peakDifficulty = difficulties.Max();
