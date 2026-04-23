@@ -30,7 +30,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
             if (osuCurrObj.Angle != null && osuPrevObj != null)
             {
-                double wideAngleBonus = SnapAimEvaluator.calcAngleWideness(osuCurrObj.Angle.Value);
+                double wideAngleBonus = SnapAimEvaluator.CalcAngleWideness(osuCurrObj.Angle.Value);
                 wideAngleBonus *= DifficultyCalculationUtils.ReverseLerp(osuPrevObj.AdjustedDeltaTime, osuCurrObj.AdjustedDeltaTime * 0.5, osuCurrObj.AdjustedDeltaTime * 0.75);
 
                 double strainPrev = getStrain(osuPrevObj, osuPrevObj1);
