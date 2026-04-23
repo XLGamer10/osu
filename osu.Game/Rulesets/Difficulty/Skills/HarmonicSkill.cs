@@ -38,7 +38,7 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         /// <summary>
         ///
         /// </summary>
-        protected virtual double DeltaTimeInfluence => 500;
+        protected virtual double DeltaTimeChunkSize => 200;
 
         /// <summary>
         ///
@@ -104,20 +104,25 @@ namespace osu.Game.Rulesets.Difficulty.Skills
             Array.Reverse(startTimes);
 
             double difficulty = 0;
+            double time = 0;
             int index = 0;
+
+            double[] weights = new double[difficulties.Length]; // for debugging
 
             foreach (double note in difficulties)
             {
                 // Use a harmonic sum that considers each note of the map according to a predefined weight.
-                double weight = (1 + HarmonicScale / (1 + index)) / (Math.Pow(index, DecayExponent) + 1 + HarmonicScale / (1 + index));
+                double weight = (1 + HarmonicScale / (1 + time)) / (Math.Pow(time, DecayExponent) + 1 + HarmonicScale / (1 + time));
 
                 if (UseTimeScaling == true)
-                    weight *= Math.Log(deltaTimes[index] + DeltaTimeInfluence, DeltaTimeInfluence)
+                    weight *= deltaTimes[index] / DeltaTimeChunkSize
                               * Math.Log(startTimes[index] + StartTimeInfluence, StartTimeInfluence);
 
                 NoteWeightSum += weight;
+                weights[index] = weight;
 
                 difficulty += note * weight;
+                time += UseTimeScaling == true ? deltaTimes[index] / DeltaTimeChunkSize : 1;
                 index += 1;
             }
 

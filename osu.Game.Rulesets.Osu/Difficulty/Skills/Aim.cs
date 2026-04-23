@@ -30,10 +30,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double currentStrain;
 
-        protected override double HarmonicScale => 55;
+        protected override double HarmonicScale => 35;
         protected override double DecayExponent => 0.90;
         protected override double MaxDeltaTime => 5000;
-        protected override double DeltaTimeInfluence => 500;
+        protected override double DeltaTimeChunkSize => 200;
         protected override double StartTimeInfluence => 2000000;
         protected override bool UseTimeScaling => true;
 
