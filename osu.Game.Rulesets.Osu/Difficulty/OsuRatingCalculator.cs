@@ -129,6 +129,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return flashlightRating * Math.Sqrt(ratingMultiplier);
         }
 
+        public double ComputeRhythmRating(double rhythmDifficultyValue)
+        {
+            return CalculateDifficultyRating(rhythmDifficultyValue);
+        }
+
         public static double CalculateDifficultyRating(double difficultyValue) => Math.Sqrt(difficultyValue) * difficulty_multiplier;
     }
 }
