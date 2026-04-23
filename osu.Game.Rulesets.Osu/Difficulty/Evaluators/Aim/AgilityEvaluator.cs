@@ -11,7 +11,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 {
     public static class AgilityEvaluator
     {
-        private const double distance_cap = OsuDifficultyHitObject.NORMALISED_DIAMETER * 1.25; // 1.25 circles distance between centers
+        private const double distance_cap = OsuDifficultyHitObject.NORMALISED_DIAMETER * 1.2; // 1.2 circles distance between centers
         private const double wide_angle_multiplier = 1.10;
 
         /// <summary>
@@ -30,7 +30,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
             if (osuCurrObj.Angle != null && osuPrevObj != null)
             {
-                double wideAngleBonus = SnapAimEvaluator.CalcWideAngleBonus(osuCurrObj.Angle.Value);
+                double wideAngleBonus = SnapAimEvaluator.calcAngleWideness(osuCurrObj.Angle.Value);
                 wideAngleBonus *= DifficultyCalculationUtils.ReverseLerp(osuPrevObj.AdjustedDeltaTime, osuCurrObj.AdjustedDeltaTime * 0.5, osuCurrObj.AdjustedDeltaTime * 0.75);
 
                 double strainPrev = getStrain(osuPrevObj, osuPrevObj1);
@@ -40,7 +40,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             strain *= Math.Pow(osuCurrObj.SmallCircleBonus, 1.5);
             strain *= highBpmBonus(osuCurrObj.AdjustedDeltaTime);
 
-            return strain * DifficultyCalculationUtils.Smootherstep(osuCurrObj.LazyJumpDistance, 0, OsuDifficultyHitObject.NORMALISED_RADIUS);
+            return strain;
         }
 
         private static double getStrain(OsuDifficultyHitObject osuCurrObj, OsuDifficultyHitObject? osuPrevObj)
