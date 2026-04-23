@@ -62,6 +62,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (current.BaseObject is Slider)
                 sliderStrains.Add(currentStrain);
 
+            if (currentStrain <= 0) return currentStrain;
+
             deltaTimesList.Add(Math.Min(((OsuDifficultyHitObject)current).AdjustedDeltaTime, maxDeltaTime));
             startTimesList.Add(current.StartTime);
 
@@ -128,7 +130,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             // Notes with 0 difficulty are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
             // These notes will not contribute to the difficulty.
-            double[] difficulties = ObjectDifficulties.ToArray();
+            double[] difficulties = ObjectDifficulties.Where(p => p > 0).ToArray();
             double[] difficultiesCopy = difficulties;
             double[] deltaTimes = deltaTimesList.ToArray();
             double[] startTimes = startTimesList.ToArray();
@@ -152,8 +154,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             {
                 // Use a harmonic sum that considers each note of the map according to a predefined weight.
                 double weight = (1 + HarmonicScale / (1 + time)) / (Math.Pow(time, DecayExponent) + 1 + HarmonicScale / (1 + time))
-                                * deltaTimes[index] / delta_time_chunk_size
-                                * Math.Log(startTimes[index] + start_time_influence, start_time_influence);
+                                * deltaTimes[index] / delta_time_chunk_size // To ensure that multiple fast objects are weighted the same as a slow object
+                                * Math.Log(startTimes[index] + start_time_influence, start_time_influence); // Buff difficult objects later on in the map
 
                 NoteWeightSum += weight;
                 difficulty += note * weight;
@@ -196,7 +198,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         protected override void ApplyDifficultyTransformation(double[] difficulties)
         {
-            const double weight_exponent = 0.5;
+            const double weight_exponent = 0.0;
             if (weight_exponent <= 0) return; // just in case someone puts in a negative number
 
             double peakDifficulty = difficulties.Max();
