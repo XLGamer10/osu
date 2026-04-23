@@ -13,7 +13,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed
     public static class SpeedEvaluator
     {
         private const double min_speed_bonus = 200; // 200 BPM 1/4th
-        private const double speed_balancing_factor = 37;
+        private const double speed_balancing_factor = 40;
 
         /// <summary>
         /// Evaluates the difficulty of tapping the current object, based on:

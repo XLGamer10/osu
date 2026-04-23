@@ -38,8 +38,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         protected override bool UseTimeScaling => true;
 
         private double skillMultiplierSnap => 68.9;
-        private double skillMultiplierAgility => 3.05;
-        private double skillMultiplierFlow => 257.0;
+        private double skillMultiplierAgility => 5.05;
+        private double skillMultiplierFlow => 307.0;
         private double skillMultiplierTotal => 1.12;
         private double combinedSnapNormExponent => 1.2;
 
