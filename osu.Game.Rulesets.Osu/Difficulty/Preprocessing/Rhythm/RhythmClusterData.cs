@@ -20,8 +20,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
 
         public readonly double InherentRatioComplexity;
 
-        public double Surprise => ParitySurprise + GapSurprise + InternalSurprise;
-
         public RhythmClusterData(int index, int size, double startTime, double endTime,
                                  double paritySurprise, double gapSurprise, double internalSurprise,
                                  double parityEntropy, double gapEntropy, double internalEntropy,
