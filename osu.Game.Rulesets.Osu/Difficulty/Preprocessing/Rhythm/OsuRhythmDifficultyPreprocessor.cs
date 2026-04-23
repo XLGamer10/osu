@@ -13,7 +13,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
     public static class OsuRhythmDifficultyPreprocessor
     {
         private const int ctw_max_depth = 8;
-        private const double ctw_epsilon_factor = 0.5;
+        private const double ctw_epsilon_factor = 0.3;
 
         private readonly struct RhythmEvent
         {
@@ -124,67 +124,141 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
 
             mergeDoubles(clusters);
 
-            scoreClusters(clusters);
+            constructAndEvaluateTrees(clusters);
         }
 
-        private static void scoreClusters(List<List<RhythmEvent>> clusters)
+        private static void constructAndEvaluateTrees(List<List<RhythmEvent>> clusters)
         {
+            // Initialize the parity, gap and internal CTW instances
             var parityCtw = new ContextTreeWeighting(ctw_max_depth, 2);
             var gapCtw = new ContextTreeWeighting(ctw_max_depth, RhythmSymbolQuantizer.RATIO_BIN_COUNT);
             var internalCtw = new ContextTreeWeighting(ctw_max_depth, RhythmSymbolQuantizer.RATIO_BIN_COUNT);
 
+            // First pass - construction of trees
+            // Track the slider tail decisions (which are based on the sequentially obtained surprisal values)
+            // This ensures that the upcoming second pass is consistent
+            int[] assignStarts = new int[clusters.Count];
+            constructTrees(clusters, parityCtw, gapCtw, internalCtw, assignStarts);
+
+            // Finalize the trees, i.e. lock the global probabilities and resets the context buffers internally
+            parityCtw.FinalizeTree();
+            gapCtw.FinalizeTree();
+            internalCtw.FinalizeTree();
+
+            // Second pass - evaluation of trees
+            // Calculate the actual difficulty metrics using the "frozen" tree
+            evaluateTrees(clusters, parityCtw, gapCtw, internalCtw, assignStarts);
+        }
+
+        private static void constructTrees(List<List<RhythmEvent>> clusters,
+                                           ContextTreeWeighting parityCtw,
+                                           ContextTreeWeighting gapCtw,
+                                           ContextTreeWeighting internalCtw,
+                                           int[] assignStarts)
+        {
             double prevGap = 0;
             double prevInternalDelta = 0;
-
-            var scoredStartTimes = new List<double>();
-            var scoredLeadingDeltas = new List<double>();
 
             for (int i = 0; i < clusters.Count; i++)
             {
                 var cluster = clusters[i];
                 bool tailLeading = cluster.Count > 1 && cluster[0].Source == null;
 
-                ScoredCluster scored;
                 int assignStart = 0;
 
                 if (tailLeading)
                 {
-                    var withTail = scoreCandidate(cluster, 0, parityCtw, gapCtw, internalCtw, prevGap, prevInternalDelta);
-                    var withoutTail = scoreCandidate(cluster, 1, parityCtw, gapCtw, internalCtw, prevGap, prevInternalDelta);
+                    var withTail = scoreCandidateConstruction(cluster, 0, parityCtw, gapCtw, internalCtw, prevGap, prevInternalDelta);
+                    var withoutTail = scoreCandidateConstruction(cluster, 1, parityCtw, gapCtw, internalCtw, prevGap, prevInternalDelta);
 
-                    scored = withoutTail.Surprise <= withTail.Surprise ? withoutTail : withTail;
                     assignStart = withoutTail.Surprise <= withTail.Surprise ? 1 : 0;
+                    var chosen = assignStart == 1 ? withoutTail : withTail;
+
+                    parityCtw.ConstructTreeNode(chosen.ParitySymbol);
+                    gapCtw.ConstructTreeNode(chosen.GapSymbol);
+                    internalCtw.ConstructTreeNode(chosen.InternalSymbol);
+
+                    prevGap = chosen.PrevGap;
+                    prevInternalDelta = chosen.PrevInternalDelta;
                 }
                 else
                 {
-                    scored = scoreCandidate(cluster, 0, parityCtw, gapCtw, internalCtw, prevGap, prevInternalDelta);
+                    int paritySymbol = cluster.Count % 2;
+                    double gapDelta = Math.Max(cluster[0].Delta, 1e-7);
+                    double epsilon = cluster[0].HitWindow * ctw_epsilon_factor;
+                    int gapSymbol = RhythmSymbolQuantizer.QuantizeRatio(gapDelta, prevGap > 0 ? prevGap : gapDelta, epsilon);
+
+                    double internalDelta = cluster.Count > 1 ? averageInternalDelta(cluster, 0) : 0;
+                    int internalSymbol = cluster.Count <= 1 || prevInternalDelta <= 0
+                        ? RhythmSymbolQuantizer.RATIO_BIN_COUNT / 2
+                        : RhythmSymbolQuantizer.QuantizeRatio(internalDelta, prevInternalDelta, epsilon);
+
+                    parityCtw.ConstructTreeNode(paritySymbol);
+                    gapCtw.ConstructTreeNode(gapSymbol);
+                    internalCtw.ConstructTreeNode(internalSymbol);
+
+                    prevGap = gapDelta;
+                    prevInternalDelta = cluster.Count > 1 ? internalDelta : prevInternalDelta;
                 }
 
-                parityCtw = scored.ParityCtw;
-                gapCtw = scored.GapCtw;
-                internalCtw = scored.InternalCtw;
-                prevGap = scored.PrevGap;
-                prevInternalDelta = scored.PrevInternalDelta;
+                assignStarts[i] = assignStart;
+            }
+        }
 
-                scoredStartTimes.Add(scored.StartTime);
-                scoredLeadingDeltas.Add(Math.Max(cluster[0].Delta, 1.0));
+        private static void evaluateTrees(List<List<RhythmEvent>> clusters,
+                                          ContextTreeWeighting parityCtw,
+                                          ContextTreeWeighting gapCtw,
+                                          ContextTreeWeighting internalCtw,
+                                          int[] assignStarts)
+        {
+            double prevGap = 0;
+            double prevInternalDelta = 0;
 
-                int contextIdx = Math.Max(0, scoredStartTimes.Count - ctw_max_depth);
-                double contextTime = scored.EndTime - scoredStartTimes[contextIdx] + scoredLeadingDeltas[contextIdx];
-                double timeScale = 1000.0 / Math.Max(contextTime, 1.0);
+            for (int i = 0; i < clusters.Count; i++)
+            {
+                var cluster = clusters[i];
+                int startOffset = assignStarts[i];
+                int count = cluster.Count - startOffset;
 
-                // Suppress clusters before the CTW context window is full.
-                if (scoredStartTimes.Count <= ctw_max_depth)
-                    timeScale = 0;
+                int paritySymbol = count % 2;
 
-                var data = new RhythmClusterData(i, scored.Count, scored.StartTime, scored.EndTime,
-                    scored.ParitySurprise * timeScale, scored.GapSurprise * timeScale, scored.InternalSurprise * timeScale);
+                double gapDelta = Math.Max(cluster[startOffset].Delta, 1e-7);
+                double epsilon = cluster[startOffset].HitWindow * ctw_epsilon_factor;
+                int gapSymbol = RhythmSymbolQuantizer.QuantizeRatio(gapDelta, prevGap > 0 ? prevGap : gapDelta, epsilon);
 
-                for (int j = assignStart; j < cluster.Count; j++)
+                double internalDelta = count > 1 ? averageInternalDelta(cluster, startOffset) : 0;
+                int internalSymbol = count <= 1 || prevInternalDelta <= 0
+                    ? RhythmSymbolQuantizer.RATIO_BIN_COUNT / 2
+                    : RhythmSymbolQuantizer.QuantizeRatio(internalDelta, prevInternalDelta, epsilon);
+
+                var parityResult = parityCtw.EvaluateTreeNode(paritySymbol);
+                var gapResult = gapCtw.EvaluateTreeNode(gapSymbol);
+                var internalResult = internalCtw.EvaluateTreeNode(internalSymbol);
+
+                double inherent = RhythmSymbolQuantizer.GetInherentRatioComplexity(gapDelta, prevGap, epsilon);
+
+                var data = new RhythmClusterData(
+                    i,
+                    count,
+                    cluster[startOffset].Time,
+                    cluster[^1].Time,
+                    parityResult.Surprisal,
+                    gapResult.Surprisal,
+                    internalResult.Surprisal,
+                    parityResult.Entropy,
+                    gapResult.Entropy,
+                    internalResult.Entropy,
+                    inherent
+                );
+
+                for (int j = startOffset; j < cluster.Count; j++)
                     cluster[j].Source?.RhythmClusters.Add(data);
+
+                prevGap = gapDelta;
+                prevInternalDelta = count > 1 ? internalDelta : prevInternalDelta;
             }
 
-            // Remove singlet entries from notes that also belong to larger clusters.
+            // Remove singlet entries from notes that also belong to larger clusters
             foreach (var cluster in clusters)
             {
                 foreach (var evt in cluster)
@@ -195,48 +269,35 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
             }
         }
 
-        private static ScoredCluster scoreCandidate(
+        private static ConstructionResult scoreCandidateConstruction(
             List<RhythmEvent> cluster, int startOffset,
             ContextTreeWeighting parityCtw, ContextTreeWeighting gapCtw, ContextTreeWeighting internalCtw,
             double prevGap, double prevInternalDelta)
         {
-            var parity = parityCtw.Clone();
-            var gap = gapCtw.Clone();
-            var intern = internalCtw.Clone();
+            var parityCtwCloned = parityCtw.Clone();
+            var gapCtwCloned = gapCtw.Clone();
+            var internalCtwCloned = internalCtw.Clone();
 
             int count = cluster.Count - startOffset;
-            double startTime = cluster[startOffset].Time;
-            double endTime = cluster[^1].Time;
-
-            double paritySurprise = parity.Update(count % 2);
+            int pSym = count % 2;
+            double paritySurprisal = parityCtwCloned.UpdateTreeNode(pSym);
 
             double gapDelta = Math.Max(cluster[startOffset].Delta, 1e-7);
             double epsilon = cluster[startOffset].HitWindow * ctw_epsilon_factor;
-            double gapSurprise = gap.Update(RhythmSymbolQuantizer.QuantizeRatio(gapDelta, prevGap > 0 ? prevGap : gapDelta, epsilon));
-            double newPrevGap = gapDelta;
+            int gapSymbol = RhythmSymbolQuantizer.QuantizeRatio(gapDelta, prevGap > 0 ? prevGap : gapDelta, epsilon);
+            double gapSurprisal = gapCtwCloned.UpdateTreeNode(gapSymbol);
 
             double internalDelta = count > 1 ? averageInternalDelta(cluster, startOffset) : 0;
-            int internalSym = count <= 1 || prevInternalDelta <= 0
+            int internalSymbol = (count <= 1 || prevInternalDelta <= 0)
                 ? RhythmSymbolQuantizer.RATIO_BIN_COUNT / 2
                 : RhythmSymbolQuantizer.QuantizeRatio(internalDelta, prevInternalDelta, epsilon);
-            double internalSurprise = intern.Update(internalSym);
+            double internalSurprisal = internalCtwCloned.UpdateTreeNode(internalSymbol);
 
-            double newPrevInternalDelta = count > 1 ? internalDelta : prevInternalDelta;
-
-            return new ScoredCluster
+            return new ConstructionResult
             {
-                Count = count,
-                StartTime = startTime,
-                EndTime = endTime,
-                ParitySurprise = paritySurprise,
-                GapSurprise = gapSurprise,
-                InternalSurprise = internalSurprise,
-                Surprise = paritySurprise + gapSurprise + internalSurprise,
-                ParityCtw = parity,
-                GapCtw = gap,
-                InternalCtw = intern,
-                PrevGap = newPrevGap,
-                PrevInternalDelta = newPrevInternalDelta,
+                Surprise = paritySurprisal + gapSurprisal + internalSurprisal,
+                ParitySymbol = pSym, GapSymbol = gapSymbol, InternalSymbol = internalSymbol,
+                PrevGap = gapDelta, PrevInternalDelta = count > 1 ? internalDelta : prevInternalDelta
             };
         }
 
@@ -254,18 +315,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
             return pairs > 0 ? sum / pairs : 0;
         }
 
-        private struct ScoredCluster
+        private struct ConstructionResult
         {
-            public int Count;
-            public double StartTime;
-            public double EndTime;
-            public double ParitySurprise;
-            public double GapSurprise;
-            public double InternalSurprise;
             public double Surprise;
-            public ContextTreeWeighting ParityCtw;
-            public ContextTreeWeighting GapCtw;
-            public ContextTreeWeighting InternalCtw;
+            public int ParitySymbol;
+            public int GapSymbol;
+            public int InternalSymbol;
             public double PrevGap;
             public double PrevInternalDelta;
         }

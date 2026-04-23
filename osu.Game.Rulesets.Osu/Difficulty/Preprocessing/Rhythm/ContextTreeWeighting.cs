@@ -180,7 +180,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
         /// Evaluates the symbol against the frozen global tree.
         /// Returns surprisal and entropy without updating node counts.
         /// </summary>
-        public EvaluationResult EvaluateTree(int symbol)
+        public EvaluationResult EvaluateTreeNode(int symbol)
         {
             int maxSearchDepth = Math.Min(bufferCount, maxDepth);
             var path = new CtwNode[maxSearchDepth + 1];
@@ -239,7 +239,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
         /// <summary>
         /// Gradually construct the global tree using the current symbol.
         /// </summary>
-        public void ConstructTree(int symbol)
+        public void ConstructTreeNode(int symbol)
         {
             int depth = Math.Min(bufferCount, maxDepth);
             var path = new CtwNode[depth + 1];
@@ -257,6 +257,35 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
 
             contextBuffer[bufferCount % maxDepth] = symbol;
             bufferCount++;
+        }
+
+        /// <summary>
+        /// Returns surprise for the symbol before updating the model.
+        /// Currently only used as a tiebreaker for rhythm clusters starting with a sliderend.
+        /// </summary>
+        public double UpdateTreeNode(int symbol)
+        {
+            double previousLogProb = root.LogProbWeighted;
+            int depth = Math.Min(bufferCount, maxDepth);
+            var path = new CtwNode[depth + 1];
+            path[0] = root;
+
+            for (int d = 0; d < depth; d++)
+            {
+                int contextSymbol = contextBuffer[(bufferCount - 1 - d) % maxDepth];
+                path[d + 1] = path[d].GetOrCreateChild(contextSymbol);
+            }
+
+            for (int d = depth; d >= 0; d--)
+                path[d].UpdateKt(symbol);
+
+            for (int d = depth; d >= 0; d--)
+                path[d].RecomputeWeighted(d == depth);
+
+            contextBuffer[bufferCount % maxDepth] = symbol;
+            bufferCount++;
+
+            return -(root.LogProbWeighted - previousLogProb);
         }
 
         /// <summary>
