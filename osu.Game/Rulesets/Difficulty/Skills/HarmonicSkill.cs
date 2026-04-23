@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Utils;
@@ -30,29 +29,6 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         /// </summary>
         protected virtual double DecayExponent => 0.9;
 
-        /// <summary>
-        ///
-        /// </summary>
-        protected virtual double MaxDeltaTime => 5000;
-
-        /// <summary>
-        ///
-        /// </summary>
-        protected virtual double DeltaTimeChunkSize => 200;
-
-        /// <summary>
-        ///
-        /// </summary>
-        protected virtual double StartTimeInfluence => 2000000;
-
-        /// <summary>
-        ///
-        /// </summary>
-        protected virtual bool UseTimeScaling => false;
-
-        private readonly List<double> times = new List<double>();
-        private readonly List<double> timesSum = new List<double>();
-
         protected HarmonicSkill(Mod[] mods)
             : base(mods)
         {
@@ -64,13 +40,7 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         protected abstract double ObjectDifficultyOf(DifficultyHitObject current);
 
         protected sealed override double ProcessInternal(DifficultyHitObject current)
-        {
-            double adjustedDeltaTime = Math.Max(current.DeltaTime, 25);
-            times.Add(Math.Min(adjustedDeltaTime, MaxDeltaTime));
-            timesSum.Add(current.StartTime);
-
-            return ObjectDifficultyOf(current);
-        }
+            => ObjectDifficultyOf(current);
 
         /// <summary>
         /// Transforms the object difficulties specifically for final difficulty summation.
@@ -87,42 +57,24 @@ namespace osu.Game.Rulesets.Difficulty.Skills
 
             // Notes with 0 difficulty are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
             // These notes will not contribute to the difficulty.
-            double[] difficulties = ObjectDifficulties.ToArray();
-            double[] difficultiesCopy = difficulties;
-            double[] deltaTimes = times.ToArray();
-            double[] startTimes = timesSum.ToArray();
+            double[] difficulties = ObjectDifficulties.Where(p => p > 0).ToArray();
 
             if (difficulties.Length == 0)
                 return 0;
 
             ApplyDifficultyTransformation(difficulties);
 
-            Array.Sort(difficulties, deltaTimes); // Sorts the difficulties and deltaTimes arrays according to difficulties
-            Array.Sort(difficultiesCopy, startTimes); // Sorts startTimes in the same way as the above
-            Array.Reverse(difficulties); // Descending order
-            Array.Reverse(deltaTimes);
-            Array.Reverse(startTimes);
-
             double difficulty = 0;
-            double time = 0;
             int index = 0;
 
-            double[] weights = new double[difficulties.Length]; // for debugging
-
-            foreach (double note in difficulties)
+            foreach (double note in difficulties.OrderDescending())
             {
                 // Use a harmonic sum that considers each note of the map according to a predefined weight.
-                double weight = (1 + HarmonicScale / (1 + time)) / (Math.Pow(time, DecayExponent) + 1 + HarmonicScale / (1 + time));
-
-                if (UseTimeScaling == true)
-                    weight *= deltaTimes[index] / DeltaTimeChunkSize
-                              * Math.Log(startTimes[index] + StartTimeInfluence, StartTimeInfluence);
+                double weight = (1 + (HarmonicScale / (1 + index))) / (Math.Pow(index, DecayExponent) + 1 + (HarmonicScale / (1 + index)));
 
                 NoteWeightSum += weight;
-                weights[index] = weight;
 
                 difficulty += note * weight;
-                time += UseTimeScaling == true ? deltaTimes[index] / DeltaTimeChunkSize : 1;
                 index += 1;
             }
 

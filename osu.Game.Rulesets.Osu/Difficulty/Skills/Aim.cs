@@ -32,18 +32,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         protected override double HarmonicScale => 35;
         protected override double DecayExponent => 0.90;
-        protected override double MaxDeltaTime => 5000;
-        protected override double DeltaTimeChunkSize => 200;
-        protected override double StartTimeInfluence => 2000000;
-        protected override bool UseTimeScaling => true;
 
         private double skillMultiplierSnap => 68.9;
         private double skillMultiplierAgility => 5.05;
         private double skillMultiplierFlow => 307.0;
         private double skillMultiplierTotal => 1.12;
         private double combinedSnapNormExponent => 1.2;
+        private double maxDeltaTime => 5000;
 
         private readonly List<double> sliderStrains = new List<double>();
+        private readonly List<double> deltaTimesList = new List<double>();
+        private readonly List<double> startTimesList = new List<double>();
 
         private double strainDecay(double ms) => Math.Pow(0.2, ms / 1000);
 
@@ -62,6 +61,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             if (current.BaseObject is Slider)
                 sliderStrains.Add(currentStrain);
+
+            deltaTimesList.Add(Math.Min(((OsuDifficultyHitObject)current).AdjustedDeltaTime, maxDeltaTime));
+            startTimesList.Add(current.StartTime);
 
             return currentStrain;
         }
@@ -114,6 +116,52 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 return 1;
 
             return DifficultyCalculationUtils.Logistic(-k * Math.Log(ratio));
+        }
+
+        public override double DifficultyValue()
+        {
+            if (ObjectDifficulties.Count == 0)
+                return 0;
+
+            const double delta_time_chunk_size = 200;
+            const double start_time_influence = 2000000;
+
+            // Notes with 0 difficulty are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
+            // These notes will not contribute to the difficulty.
+            double[] difficulties = ObjectDifficulties.ToArray();
+            double[] difficultiesCopy = difficulties;
+            double[] deltaTimes = deltaTimesList.ToArray();
+            double[] startTimes = startTimesList.ToArray();
+
+            if (difficulties.Length == 0)
+                return 0;
+
+            ApplyDifficultyTransformation(difficulties);
+
+            Array.Sort(difficulties, deltaTimes); // Sorts the difficulties and deltaTimes arrays according to difficulties
+            Array.Sort(difficultiesCopy, startTimes); // Sorts startTimes in the same way as the above
+            Array.Reverse(difficulties); // Descending order
+            Array.Reverse(deltaTimes);
+            Array.Reverse(startTimes);
+
+            double difficulty = 0;
+            double time = 0;
+            int index = 0;
+
+            foreach (double note in difficulties)
+            {
+                // Use a harmonic sum that considers each note of the map according to a predefined weight.
+                double weight = (1 + HarmonicScale / (1 + time)) / (Math.Pow(time, DecayExponent) + 1 + HarmonicScale / (1 + time))
+                                * deltaTimes[index] / delta_time_chunk_size
+                                * Math.Log(startTimes[index] + start_time_influence, start_time_influence);
+
+                NoteWeightSum += weight;
+                difficulty += note * weight;
+                time += deltaTimes[index] / delta_time_chunk_size;
+                index += 1;
+            }
+
+            return difficulty;
         }
 
         public double GetDifficultSliders()
