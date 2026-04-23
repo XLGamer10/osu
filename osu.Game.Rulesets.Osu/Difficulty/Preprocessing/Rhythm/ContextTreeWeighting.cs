@@ -9,8 +9,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
     {
         private readonly int alphabetSize;
         private readonly int[] counts;
-        private double logProbKT;
-        private double logProbWeighted;
+        private double logProbKt;
         private CtwNode?[]? children;
 
         private int totalCount;
@@ -25,17 +24,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
         {
             alphabetSize = other.alphabetSize;
             counts = (int[])other.counts.Clone();
-            logProbKT = other.logProbKT;
-            logProbWeighted = other.logProbWeighted;
+            logProbKt = other.logProbKt;
+            LogProbWeighted = other.LogProbWeighted;
             totalCount = other.totalCount;
 
-            if (other.children != null)
-            {
-                children = new CtwNode?[alphabetSize];
+            if (other.children == null) return;
 
-                for (int i = 0; i < alphabetSize; i++)
-                    children[i] = other.children[i]?.Clone();
-            }
+            children = new CtwNode?[alphabetSize];
+
+            for (int i = 0; i < alphabetSize; i++)
+                children[i] = other.children[i]?.Clone();
         }
 
         public CtwNode Clone() => new CtwNode(this);
@@ -44,12 +42,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
         /// Returns the KT-estimated log-probability of the symbol before updating counts.
         /// KT estimator: P(s) = (n_s + 0.5) / (n + K/2)
         /// </summary>
-        public double UpdateKT(int symbol)
+        public double UpdateKt(int symbol)
         {
             double prob = (counts[symbol] + 0.5) / (totalCount + alphabetSize / 2.0);
             double logProb = Math.Log(prob);
 
-            logProbKT += logProb;
+            logProbKt += logProb;
             counts[symbol]++;
             totalCount++;
 
@@ -62,14 +60,21 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
             return children[symbol] ??= new CtwNode(alphabetSize);
         }
 
-        // Recomputes weighted probability mixing KT estimate with children's predictions.
-        // At leaf depth the KT estimate is used directly; at internal nodes we average
-        // the KT estimate with the product of children's weighted probabilities.
+        public CtwNode? GetChild(int symbol)
+        {
+            return children?[symbol];
+        }
+
+        /// <summary>
+        /// Recomputes weighted probability mixing KT estimate with children's predictions.
+        /// At leaf depth, use the KT estimate directly; at internal nodes, average
+        /// the KT estimate with the product of children's weighted probabilities.
+        /// </summary>
         public void RecomputeWeighted(bool isLeaf)
         {
             if (isLeaf)
             {
-                logProbWeighted = logProbKT;
+                LogProbWeighted = logProbKt;
                 return;
             }
 
@@ -80,16 +85,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
                 foreach (var child in children)
                 {
                     if (child != null)
-                        logProbChildren += child.logProbWeighted;
+                        logProbChildren += child.LogProbWeighted;
                 }
             }
 
-            logProbWeighted = Math.Log(0.5) + logSumExp(logProbKT, logProbChildren);
+            LogProbWeighted = Math.Log(0.5) + LogSumExp(logProbKt, logProbChildren);
         }
 
-        public double LogProbWeighted => logProbWeighted;
+        public double LogProbWeighted { get; private set; }
 
-        private static double logSumExp(double a, double b)
+        public static double LogSumExp(double a, double b)
         {
             double max = Math.Max(a, b);
 
@@ -97,6 +102,44 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
                 return double.NegativeInfinity;
 
             return max + Math.Log(Math.Exp(a - max) + Math.Exp(b - max));
+        }
+
+        /// <summary>
+        /// Only return the KT-estimated log-probability of the symbol.
+        /// </summary>
+        public double GetKtProb(int symbol)
+        {
+            return (counts[symbol] + 0.5) / (totalCount + alphabetSize / 2.0);
+        }
+
+        /// <summary>
+        /// Return the entropy of the decision space at the node.
+        /// </summary>
+        public double GetEntropy()
+        {
+            double entropy = 0;
+
+            for (int i = 0; i < alphabetSize; i++)
+            {
+                double p = (counts[i] + 0.5) / (totalCount + alphabetSize / 2.0);
+                entropy -= p * Math.Log(p, 2);
+            }
+
+            return entropy;
+        }
+
+        /// <summary>
+        /// Recursively recomputes weighted probabilities bottom-up.
+        /// </summary>
+        public void FinalizeProbabilities(int currentDepth, int maxDepth)
+        {
+            if (children != null)
+            {
+                foreach (var child in children)
+                    child?.FinalizeProbabilities(currentDepth + 1, maxDepth);
+            }
+
+            RecomputeWeighted(currentDepth == maxDepth);
         }
     }
 
@@ -127,16 +170,78 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
 
         public ContextTreeWeighting Clone() => new ContextTreeWeighting(this);
 
-        // Returns surprise (-log P_ctw) for the symbol before updating the model.
-        // Walks the context tree from root to leaf using the context buffer,
-        // updates KT estimates bottom-up, then recomputes weighted probabilities.
-        public double Update(int symbol)
+        public struct EvaluationResult
         {
-            double previousLogProb = root.LogProbWeighted;
+            public double Surprisal;
+            public double Entropy;
+        }
 
+        /// <summary>
+        /// Evaluates the symbol against the frozen global tree.
+        /// Returns surprisal and entropy without updating node counts.
+        /// </summary>
+        public EvaluationResult EvaluateTree(int symbol)
+        {
+            int maxSearchDepth = Math.Min(bufferCount, maxDepth);
+            var path = new CtwNode[maxSearchDepth + 1];
+            path[0] = root;
+
+            int actualDepth = 0;
+
+            // Collect the path
+            for (int d = 0; d < maxSearchDepth; d++)
+            {
+                int contextSymbol = contextBuffer[(bufferCount - 1 - d) % maxDepth];
+                var child = path[d].GetChild(contextSymbol);
+
+                if (child == null)
+                    break;
+
+                path[d + 1] = child;
+                actualDepth++;
+            }
+
+            // Calculate the weighted log-probability of THIS specific symbol
+            // To be consistent with RecomputeWeighted, mix bottom-up
+            double logProbMixed = 0;
+
+            for (int d = actualDepth; d >= 0; d--)
+            {
+                double logProbKt = Math.Log(path[d].GetKtProb(symbol));
+
+                if (d == actualDepth)
+                {
+                    logProbMixed = logProbKt;
+                }
+                else
+                {
+                    // Mix the KT estimate of the current node with the mixed estimate of the deeper context
+                    // "Read-only" analog to dynamically constructing the CTW tree
+                    // P_mixed = 0.5 * P_kt + 0.5 * P_deeper
+                    logProbMixed = Math.Log(0.5) + CtwNode.LogSumExp(logProbKt, logProbMixed);
+                }
+            }
+
+            double surprisal = -logProbMixed / Math.Log(2); // Convert to bits
+            double entropy = path[actualDepth].GetEntropy(); // Contextual entropy at the deepest node
+
+            // Update the sliding context window
+            contextBuffer[bufferCount % maxDepth] = symbol;
+            bufferCount++;
+
+            return new EvaluationResult
+            {
+                Surprisal = surprisal,
+                Entropy = entropy
+            };
+        }
+
+        /// <summary>
+        /// Gradually construct the global tree using the current symbol.
+        /// </summary>
+        public void ConstructTree(int symbol)
+        {
             int depth = Math.Min(bufferCount, maxDepth);
-
-            // Collect nodes along the context path (root to leaf)
             var path = new CtwNode[depth + 1];
             path[0] = root;
 
@@ -146,20 +251,25 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
                 path[d + 1] = path[d].GetOrCreateChild(contextSymbol);
             }
 
-            // Update KT estimates at every node along the path
+            // Strictly update counts along the path
             for (int d = depth; d >= 0; d--)
-                path[d].UpdateKT(symbol);
+                path[d].UpdateKt(symbol);
 
-            // Recompute weighted probabilities bottom-up
-            for (int d = depth; d >= 0; d--)
-                path[d].RecomputeWeighted(d == depth);
-
-            // Store symbol in circular context buffer
             contextBuffer[bufferCount % maxDepth] = symbol;
             bufferCount++;
+        }
 
-            // Surprise = negative log-probability of this symbol under the CTW model
-            return -(root.LogProbWeighted - previousLogProb);
+        /// <summary>
+        /// Finalize the probabilities of the entire tree to be ready for evaluation.
+        /// </summary>
+        public void FinalizeTree()
+        {
+            root.FinalizeProbabilities(0, maxDepth);
+
+            // Reset the bufferCount and contextBuffer so the Evaluation pass
+            // starts with a fresh context, exactly like the Construction pass did
+            bufferCount = 0;
+            Array.Clear(contextBuffer, 0, contextBuffer.Length);
         }
     }
 }
