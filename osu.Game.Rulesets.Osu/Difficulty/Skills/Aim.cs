@@ -198,7 +198,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         protected override void ApplyDifficultyTransformation(double[] difficulties)
         {
-            const double weight_exponent = 0.0;
+            const double weight_exponent = 0.5;
             if (weight_exponent <= 0) return; // just in case someone puts in a negative number
 
             double peakDifficulty = difficulties.Max();
