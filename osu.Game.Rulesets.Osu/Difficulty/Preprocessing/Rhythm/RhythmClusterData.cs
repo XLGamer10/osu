@@ -10,9 +10,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
         public readonly double StartTime;
         public readonly double EndTime;
 
-        public readonly double ParitySurprise;
-        public readonly double GapSurprise;
-        public readonly double InternalSurprise;
+        public readonly double ParitySurprisal;
+        public readonly double GapSurprisal;
+        public readonly double InternalSurprisal;
 
         public readonly double ParityEntropy;
         public readonly double GapEntropy;
@@ -21,7 +21,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
         public readonly double InherentRatioComplexity;
 
         public RhythmClusterData(int index, int size, double startTime, double endTime,
-                                 double paritySurprise, double gapSurprise, double internalSurprise,
+                                 double paritySurprisal, double gapSurprisal, double internalSurprisal,
                                  double parityEntropy, double gapEntropy, double internalEntropy,
                                  double inherentComplexity)
         {
@@ -29,9 +29,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
             Size = size;
             StartTime = startTime;
             EndTime = endTime;
-            ParitySurprise = paritySurprise;
-            GapSurprise = gapSurprise;
-            InternalSurprise = internalSurprise;
+            ParitySurprisal = paritySurprisal;
+            GapSurprisal = gapSurprisal;
+            InternalSurprisal = internalSurprisal;
             ParityEntropy = parityEntropy;
             GapEntropy = gapEntropy;
             InternalEntropy = internalEntropy;
