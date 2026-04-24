@@ -27,8 +27,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         public override double DifficultyValue()
         {
             var positive = ObjectDifficulties.Where(d => d > 0).ToList();
-            double entropyRate = positive.Count > 0 ? positive.Average() : 0;
-            return 15.0 * Math.Pow(entropyRate, 1.0);
+            if (positive.Count == 0) return 0;
+
+            const double p = 2.0;
+
+            double powerSum = positive.Sum(d => Math.Pow(d, p));
+            double powerMean = Math.Pow(powerSum / positive.Count, 1.0 / p);
+
+            return 15.0 * powerMean;
         }
 
         public static double DifficultyToPerformance(double difficulty) => 4.0 * Math.Pow(difficulty, 3.0);
