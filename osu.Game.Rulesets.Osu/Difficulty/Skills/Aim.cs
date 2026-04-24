@@ -120,52 +120,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return DifficultyCalculationUtils.Logistic(-k * Math.Log(ratio));
         }
 
-        public override double DifficultyValue()
-        {
-            if (ObjectDifficulties.Count == 0)
-                return 0;
-
-            const double delta_time_chunk_size = 200;
-            const double start_time_influence = 500000;
-
-            // Notes with 0 difficulty are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
-            // These notes will not contribute to the difficulty.
-            double[] difficulties = ObjectDifficulties.Where(p => p > 0).ToArray();
-            double[] difficultiesCopy = difficulties;
-            double[] deltaTimes = deltaTimesList.ToArray();
-            double[] startTimes = startTimesList.ToArray();
-
-            if (difficulties.Length == 0)
-                return 0;
-
-            ApplyDifficultyTransformation(difficulties);
-
-            Array.Sort(difficulties, deltaTimes); // Sorts the difficulties and deltaTimes arrays according to difficulties
-            Array.Sort(difficultiesCopy, startTimes); // Sorts startTimes in the same way as the above
-            Array.Reverse(difficulties); // Descending order
-            Array.Reverse(deltaTimes);
-            Array.Reverse(startTimes);
-
-            double difficulty = 0;
-            double time = 0;
-            int index = 0;
-
-            foreach (double note in difficulties)
-            {
-                // Use a harmonic sum that considers each note of the map according to a predefined weight.
-                double weight = (1 + HarmonicScale / (1 + time)) / (Math.Pow(time, DecayExponent) + 1 + HarmonicScale / (1 + time))
-                                * deltaTimes[index] / delta_time_chunk_size // To ensure that multiple fast objects are weighted the same as a slow object
-                                * Math.Log(startTimes[index] + start_time_influence, start_time_influence); // Buff difficult objects later on in the map
-
-                NoteWeightSum += weight;
-                difficulty += note * weight;
-                time += deltaTimes[index] / delta_time_chunk_size;
-                index += 1;
-            }
-
-            return difficulty;
-        }
-
         public double GetDifficultSliders()
         {
             if (sliderStrains.Count == 0)
@@ -196,6 +150,52 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return sliderStrains.Sum(s => DifficultyCalculationUtils.Logistic(s / consistentTopNote, 0.88, 10, 1.1));
         }
 
+        public override double DifficultyValue()
+        {
+            if (ObjectDifficulties.Count == 0)
+                return 0;
+
+            const double delta_time_chunk_size = 200;
+            const double start_time_influence = 500000;
+
+            // Notes with 0 difficulty are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
+            // These notes will not contribute to the difficulty.
+            double[] difficulties = ObjectDifficulties.Where(p => p > 0).ToArray();
+            double[] difficultiesCopy = difficulties; // Created because .Sort() only accepts one extra array to sort while we need to sort two
+            double[] deltaTimes = deltaTimesList.ToArray();
+            double[] startTimes = startTimesList.ToArray();
+
+            if (difficulties.Length == 0)
+                return 0;
+
+            ApplyDifficultyTransformation(difficulties);
+
+            Array.Sort(difficulties, deltaTimes); // Sorts the difficulties and deltaTimes arrays according to difficulties
+            Array.Sort(difficultiesCopy, startTimes); // Sorts startTimes in the same way as the above
+            Array.Reverse(difficulties); // Descending order
+            Array.Reverse(deltaTimes);
+            Array.Reverse(startTimes);
+
+            double difficulty = 0;
+            double time = 0;
+            int index = 0;
+
+            foreach (double note in difficulties)
+            {
+                // Use a harmonic sum that considers each note of the map according to a predefined weight.
+                double weight = (1 + HarmonicScale / (1 + time)) / (Math.Pow(time, DecayExponent) + 1 + HarmonicScale / (1 + time))
+                                * deltaTimes[index] / delta_time_chunk_size // To ensure that multiple fast notes are weighted the same as a slow note
+                                * Math.Log(startTimes[index] + start_time_influence, start_time_influence); // Buff difficult notes later on in the map
+
+                NoteWeightSum += weight;
+                difficulty += note * weight;
+                time += deltaTimes[index] / delta_time_chunk_size;
+                index += 1;
+            }
+
+            return difficulty;
+        }
+
         protected override void ApplyDifficultyTransformation(double[] difficulties)
         {
             const double weight_exponent = 0.4;
@@ -203,6 +203,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             double peakDifficulty = difficulties.Max();
 
+            // Reduce the difficulty of notes that are easier than the most difficult object
             for (int i = 0; i < difficulties.Length; i++)
             {
                 difficulties[i] *= Math.Pow(difficulties[i], weight_exponent) / Math.Pow(peakDifficulty, weight_exponent);
