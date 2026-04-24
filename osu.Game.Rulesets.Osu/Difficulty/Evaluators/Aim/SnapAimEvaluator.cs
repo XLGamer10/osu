@@ -99,13 +99,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
                 // Rescaling velocity for the wide angle bonus
                 const double wide_angle_time_scale = 1.45;
-                double wideAngleCurrVelocity = currDistance / Math.Pow(osuCurrObj.AdjustedDeltaTime, wide_angle_time_scale);
-                double wideAnglePrevVelocity = prevDistance / Math.Pow(osuLastObj.AdjustedDeltaTime, wide_angle_time_scale);
+                double wideAngleCurrVelocity = currDistance / Math.Pow(currDeltaTime, wide_angle_time_scale);
+                double wideAnglePrevVelocity = prevDistance / Math.Pow(lastDeltaTime, wide_angle_time_scale);
 
                 if (osuLastObj.BaseObject is Slider && withSliderTravelDistance)
                 {
                     double sliderDistance = osuLastObj.LazyTravelDistance + osuCurrObj.LazyJumpDistance;
-                    wideAngleCurrVelocity = Math.Max(wideAngleCurrVelocity, sliderDistance / Math.Pow(osuCurrObj.AdjustedDeltaTime, wide_angle_time_scale));
+                    wideAngleCurrVelocity = Math.Max(wideAngleCurrVelocity, sliderDistance / Math.Pow(currDeltaTime, wide_angle_time_scale));
                 }
 
                 wideAngleBonus *= Math.Min(wideAngleCurrVelocity, wideAnglePrevVelocity);
