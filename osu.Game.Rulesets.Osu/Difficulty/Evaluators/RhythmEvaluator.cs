@@ -14,8 +14,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
     /// </summary>
     public static class RhythmEvaluator
     {
-        private const double surprisal_factor = 25.0;
-        private const double entropy_factor = 5.0;
+        private const double surprisal_factor = 8.0;
+        private const double entropy_factor = 1.6;
         private const int window_size = 8; // Pull this from OsuRhythmDifficultyPreprocessor constants
 
         public static double EvaluateDifficultyOf(DifficultyHitObject current)
@@ -52,7 +52,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                     // Apply time scaling (there has to be a better way...)
                     double timeScale = 1000.0 / Math.Max(current.DeltaTime, 1.0);
 
-                    totalWeightedComplexity += combined * timeScale / Math.Max(1, cluster.Size);
+                    totalWeightedComplexity += combined * timeScale;
                 }
             }
 
