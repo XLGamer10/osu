@@ -14,9 +14,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
     /// </summary>
     public static class RhythmEvaluator
     {
-        private const double surprisal_factor = 1.0;
-        private const double entropy_factor = 1.0;
-        private const double inherent_factor = 0.0; // Would rather avoid using this...
+        private const double surprisal_factor = 25.0;
+        private const double entropy_factor = 5.0;
         private const int window_size = 8; // Pull this from OsuRhythmDifficultyPreprocessor constants
 
         public static double EvaluateDifficultyOf(DifficultyHitObject current)
@@ -46,20 +45,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                                          + cluster.GapEntropy / 4.95
                                          + cluster.InternalEntropy / 4.95;
 
-                    // Scale the inherent ratio complexity differently
-                    // Since the Euler Gradus can range from 1 (for simpler ratios) to 10 (for complex ones like 7:8),
-                    // a decent heuristic might be to square root it first
-                    double inherentRatioComplexity = Math.Sqrt(Math.Max(0, cluster.InherentRatioComplexity - 1));
-
                     // Combine using tunable weights
                     double combined = surprisal_factor * normSurprisal
-                                      + entropy_factor * normEntropy
-                                      + inherent_factor * inherentRatioComplexity;
+                                      + entropy_factor * normEntropy;
 
-                    // Apply primitive time scaling (there has to be a better way...)
+                    // Apply time scaling (there has to be a better way...)
                     double timeScale = 1000.0 / Math.Max(current.DeltaTime, 1.0);
 
-                    totalWeightedComplexity += combined * timeScale;
+                    totalWeightedComplexity += combined * timeScale / Math.Max(1, cluster.Size);
                 }
             }
 

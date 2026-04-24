@@ -18,12 +18,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
         public readonly double GapEntropy;
         public readonly double InternalEntropy;
 
-        public readonly double InherentRatioComplexity;
-
         public RhythmClusterData(int index, int size, double startTime, double endTime,
                                  double paritySurprisal, double gapSurprisal, double internalSurprisal,
-                                 double parityEntropy, double gapEntropy, double internalEntropy,
-                                 double inherentComplexity)
+                                 double parityEntropy, double gapEntropy, double internalEntropy)
         {
             Index = index;
             Size = size;
@@ -35,7 +32,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
             ParityEntropy = parityEntropy;
             GapEntropy = gapEntropy;
             InternalEntropy = internalEntropy;
-            InherentRatioComplexity = inherentComplexity;
         }
     }
 }

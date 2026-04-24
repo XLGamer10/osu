@@ -235,8 +235,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
                 var gapResult = gapCtw.EvaluateTreeNode(gapSymbol);
                 var internalResult = internalCtw.EvaluateTreeNode(internalSymbol);
 
-                double inherent = RhythmSymbolQuantizer.GetInherentRatioComplexity(gapDelta, prevGap, epsilon);
-
                 var data = new RhythmClusterData(
                     i,
                     count,
@@ -247,8 +245,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
                     internalResult.Surprisal,
                     parityResult.Entropy,
                     gapResult.Entropy,
-                    internalResult.Entropy,
-                    inherent
+                    internalResult.Entropy
                 );
 
                 for (int j = startOffset; j < cluster.Count; j++)
