@@ -112,7 +112,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double baseAimPerformance = OsuPerformanceCalculator.DifficultyToPerformance(aimRating);
             double baseSpeedPerformance = HarmonicSkill.DifficultyToPerformance(speedRating);
-            double baseRhythmPerformance = Rhythm.DifficultyToPerformance(rhythmRating);
+            double baseRhythmPerformance = HarmonicSkill.DifficultyToPerformance(rhythmRating);
             double baseReadingPerformance = HarmonicSkill.DifficultyToPerformance(readingRating);
             double baseFlashlightPerformance = Flashlight.DifficultyToPerformance(flashlightRating);
             double baseCognitionPerformance = SumCognitionDifficulty(baseReadingPerformance, baseFlashlightPerformance);

@@ -2,41 +2,57 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Linq;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
-using osu.Game.Rulesets.Difficulty.Skills;
 using osu.Game.Rulesets.Mods;
+using System.Linq;
+using osu.Game.Rulesets.Difficulty.Skills;
 using osu.Game.Rulesets.Osu.Difficulty.Evaluators;
+using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 {
     /// <summary>
-    /// Measures rhythmic complexity as the entropy rate of the CTW model.
-    /// Final difficulty is a primitive power-mean of all positive per-object entropy rates.
+    /// Represents the skill required to continuously interpret rhythms on the cognitive level.
     /// </summary>
-    public class Rhythm : Skill
+    public class Rhythm : HarmonicSkill
     {
+        private double skillMultiplier => 6.2;
+
+        private double currentDifficulty;
+
+        private double strainDecayBase => 0.25;
+
+        protected override double HarmonicScale => 20;
+        protected override double DecayExponent => 0.95;
+
         public Rhythm(Mod[] mods)
             : base(mods)
         {
         }
 
-        protected override double ProcessInternal(DifficultyHitObject current)
-            => RhythmEvaluator.EvaluateDifficultyOf(current);
+        private double strainDecay(double ms) => Math.Pow(strainDecayBase, ms / 1000);
 
-        public override double DifficultyValue()
+        protected override double ObjectDifficultyOf(DifficultyHitObject current)
         {
-            var positive = ObjectDifficulties.Where(d => d > 0).ToList();
-            if (positive.Count == 0) return 0;
+            double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
 
-            const double p = 2.0;
+            currentDifficulty *= decay;
+            currentDifficulty += RhythmEvaluator.EvaluateDifficultyOf(current) * (1 - decay) * skillMultiplier;
 
-            double powerSum = positive.Sum(d => Math.Pow(d, p));
-            double powerMean = Math.Pow(powerSum / positive.Count, 1.0 / p);
-
-            return 15.0 * powerMean;
+            return currentDifficulty;
         }
 
-        public static double DifficultyToPerformance(double difficulty) => 4.0 * Math.Pow(difficulty, 3.0);
+        public double RelevantNoteCount()
+        {
+            if (ObjectDifficulties.Count == 0)
+                return 0;
+
+            double maxStrain = ObjectDifficulties.Max();
+
+            if (maxStrain == 0)
+                return 0;
+
+            return ObjectDifficulties.Sum(strain => 1.0 / (1.0 + Math.Exp(-(strain / maxStrain * 12.0 - 6.0))));
+        }
     }
 }
