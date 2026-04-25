@@ -12,7 +12,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 {
     /// <summary>
     /// Measures rhythmic complexity as the entropy rate of the CTW model.
-    /// Final difficulty is the mean of all positive per-object entropy rates.
+    /// Final difficulty is a primitive power-mean of all positive per-object entropy rates.
     /// </summary>
     public class Rhythm : Skill
     {
