@@ -130,9 +130,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
         private static void constructAndEvaluateTrees(List<List<RhythmEvent>> clusters)
         {
             // Initialize the parity, gap and internal CTW instances
-            var parityCtw = new ContextTreeWeighting(ctw_max_depth, 2);
-            var gapCtw = new ContextTreeWeighting(ctw_max_depth, RhythmSymbolQuantizer.RATIO_BIN_COUNT);
-            var internalCtw = new ContextTreeWeighting(ctw_max_depth, RhythmSymbolQuantizer.RATIO_BIN_COUNT);
+            var parityCtw = new ContextTreeWeighting(ctw_max_depth, 2, RhythmPriors.PARITY_PRIOR);
+            var gapCtw = new ContextTreeWeighting(ctw_max_depth, RhythmSymbolQuantizer.RATIO_BIN_COUNT, RhythmPriors.RATIO_PRIOR);
+            var internalCtw = new ContextTreeWeighting(ctw_max_depth, RhythmSymbolQuantizer.RATIO_BIN_COUNT, RhythmPriors.RATIO_PRIOR);
 
             // First pass - construction of trees
             // Track the slider tail decisions (which are based on the sequentially obtained surprisal values)
@@ -141,9 +141,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
             constructTrees(clusters, parityCtw, gapCtw, internalCtw, assignStarts);
 
             // Finalize the trees, i.e. lock the global probabilities and resets the context buffers internally
-            parityCtw.FinalizeTree();
-            gapCtw.FinalizeTree();
-            internalCtw.FinalizeTree();
+            parityCtw.FinalizeTreeProbs();
+            gapCtw.FinalizeTreeProbs();
+            internalCtw.FinalizeTreeProbs();
 
             // Second pass - evaluation of trees
             // Calculate the actual difficulty metrics using the "frozen" tree
@@ -243,9 +243,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
                     parityResult.Surprisal,
                     gapResult.Surprisal,
                     internalResult.Surprisal,
-                    parityResult.Entropy,
-                    gapResult.Entropy,
-                    internalResult.Entropy
+                    parityResult.CrossEntropy,
+                    gapResult.CrossEntropy,
+                    internalResult.CrossEntropy
                 );
 
                 for (int j = startOffset; j < cluster.Count; j++)

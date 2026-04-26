@@ -113,22 +113,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
         }
 
         /// <summary>
-        /// Return the entropy of the decision space at the node.
-        /// </summary>
-        public double GetEntropy()
-        {
-            double entropy = 0;
-
-            for (int i = 0; i < alphabetSize; i++)
-            {
-                double p = (counts[i] + 0.5) / (totalCount + alphabetSize / 2.0);
-                entropy -= p * Math.Log(p, 2);
-            }
-
-            return entropy;
-        }
-
-        /// <summary>
         /// Recursively recomputes weighted probabilities bottom-up.
         /// </summary>
         public void FinalizeProbabilities(int currentDepth, int maxDepth)
@@ -143,18 +127,64 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
         }
     }
 
+    public static class RhythmPriors
+    {
+        // Weights for the 31-bin ratio quantizer
+        public static readonly double[] RATIO_PRIOR = generateRatioPrior();
+
+        // Weights for the 2-bin parity checker
+        public static readonly double[] PARITY_PRIOR = new double[2] { 0.2, 0.8 }; // Odds more likely than evens
+
+        private static double[] generateRatioPrior()
+        {
+            double[] prior = new double[31];
+            double total = 0;
+
+            double logMin = Math.Log(1.0 / 16.0);
+            double logMax = Math.Log(16.0);
+            double binWidth = (logMax - logMin) / 31;
+
+            for (int i = 0; i < 31; i++)
+            {
+                // Find the center of the log-bin
+                double logRatioAtBin = logMin + (i + 0.5) * binWidth;
+                double ratio = Math.Exp(logRatioAtBin);
+
+                // Start with a small noise floor to prevent division by zero
+                double weight = 0.01;
+
+                if (isClose(ratio, 1.0)) weight += 0.60; // 1:1
+                else if (isClose(ratio, 0.5) || isClose(ratio, 2.0)) weight += 0.20; // 1:2 or 2:1
+                else if (isClose(ratio, 0.33) || isClose(ratio, 3.0)) weight += 0.10; // 1:3 or 3:1
+                else if (isClose(ratio, 0.66) || isClose(ratio, 1.5)) weight += 0.05; // 2:3 or 3:2
+
+                prior[i] = weight;
+                total += weight;
+            }
+
+            // Normalize so the distribution sums to 1.0
+            for (int i = 0; i < 31; i++) prior[i] /= total;
+
+            return prior;
+        }
+
+        private static bool isClose(double a, double b) => Math.Abs(a - b) < 0.08;
+    }
+
     public class ContextTreeWeighting
     {
         private readonly int maxDepth;
         private readonly int alphabetSize;
         private readonly CtwNode root;
         private readonly int[] contextBuffer;
+        private readonly double[] prior;
         private int bufferCount;
 
-        public ContextTreeWeighting(int maxDepth, int alphabetSize)
+        public ContextTreeWeighting(int maxDepth, int alphabetSize, double[] prior)
         {
             this.maxDepth = maxDepth;
             this.alphabetSize = alphabetSize;
+            this.prior = prior;
             root = new CtwNode(alphabetSize);
             contextBuffer = new int[maxDepth];
         }
@@ -163,6 +193,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
         {
             maxDepth = other.maxDepth;
             alphabetSize = other.alphabetSize;
+            prior = other.prior;
             root = other.root.Clone();
             contextBuffer = (int[])other.contextBuffer.Clone();
             bufferCount = other.bufferCount;
@@ -173,12 +204,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
         public struct EvaluationResult
         {
             public double Surprisal;
-            public double Entropy;
+            public double CrossEntropy;
         }
 
         /// <summary>
         /// Evaluates the symbol against the frozen global tree.
-        /// Returns surprisal and entropy without updating node counts.
+        /// Returns surprisal and cross-entropy without updating node counts.
         /// </summary>
         public EvaluationResult EvaluateTreeNode(int symbol)
         {
@@ -223,7 +254,20 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
             }
 
             double surprisal = -logProbMixed / Math.Log(2); // Convert to bits
-            double entropy = path[actualDepth].GetEntropy(); // Contextual entropy at the deepest node
+
+            double crossEntropy = 0;
+            var node = path[actualDepth];
+
+            for (int i = 0; i < alphabetSize; i++)
+            {
+                double p = node.GetKtProb(i);
+                double q = prior[i];
+
+                crossEntropy += p * -Math.Log(q, 2);
+            }
+
+            const double prior_base_entropy = 1.5;
+            double finalCrossEntropy = Math.Max(0, crossEntropy - prior_base_entropy);
 
             // Update the sliding context window
             contextBuffer[bufferCount % maxDepth] = symbol;
@@ -232,7 +276,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
             return new EvaluationResult
             {
                 Surprisal = surprisal,
-                Entropy = entropy
+                CrossEntropy = Math.Max(0, crossEntropy)
             };
         }
 
@@ -291,7 +335,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
         /// <summary>
         /// Finalize the probabilities of the entire tree to be ready for evaluation.
         /// </summary>
-        public void FinalizeTree()
+        public void FinalizeTreeProbs()
         {
             root.FinalizeProbabilities(0, maxDepth);
 

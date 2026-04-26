@@ -9,12 +9,12 @@ using osu.Game.Rulesets.Osu.Objects;
 namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
 {
     /// <summary>
-    /// Compute the local CTW surprise and associated entropy at node.
+    /// Compute the local CTW surprise and cross-entropy with respect to an "ideal" prior.
     /// </summary>
     public static class RhythmEvaluator
     {
-        private const double surprisal_factor = 1.0;
-        private const double entropy_factor = 0.2;
+        private const double surprisal_factor = 0.5;
+        private const double cross_entropy_factor = 0.5;
         private const int window_size = 8; // Pull this from OsuRhythmDifficultyPreprocessor constants later...
 
         public static double EvaluateDifficultyOf(DifficultyHitObject current)
@@ -22,7 +22,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
             if (current.BaseObject is Spinner)
                 return 0;
 
-            var osuCurr = (OsuDifficultyHitObject)current;
             double totalWeightedComplexity = 0;
 
             for (int i = 0; i < window_size; i++)
@@ -39,25 +38,27 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                     bool isLastNote = Math.Abs(osuObj.StartTime - cluster.EndTime) < 1e-7;
 
                     // Inter-cluster (gap): entry shock of the transition
-                    double gapScore = isFirstNote ? cluster.GapSurprisal : 0;
+                    double gapSurprisal = isFirstNote ? cluster.GapSurprisal : 0;
 
                     // Intra-cluster (internal): the sustained difficulty of maintaining the internal rhythm, spread throughout the cluster
-                    double internalScore = cluster.InternalSurprisal / cluster.Size;
+                    double internalSurprisal = cluster.InternalSurprisal / cluster.Size;
 
                     // Parity (resolution): exit shock of the transition
-                    double parityScore = isLastNote ? cluster.ParitySurprisal : 0;
+                    double paritySurprisal = isLastNote ? cluster.ParitySurprisal : 0;
 
-                    // We are deliberately not normalizing surprisal by alphabet size (lod2) due to parity often having an outsized effect
-                    double normSurprisal = gapScore + internalScore + parityScore;
+                    // We are deliberately not normalizing surprisal by alphabet size (log2) due to parity often having an outsized effect
+                    double totalSurprisal = gapSurprisal + internalSurprisal + paritySurprisal;
 
-                    // Amortize entropy at node across the cluster size
-                    double normNodalEntropy = (cluster.ParityEntropy
-                                               + cluster.GapEntropy
-                                               + cluster.InternalEntropy) / cluster.Size;
+                    // Likewise for cross-entropy
+                    double gapCrossEntropy = isFirstNote ? cluster.GapCrossEntropy : 0;
+                    double internalCrossEntropy = cluster.InternalCrossEntropy / cluster.Size;
+                    double parityCrossEntropy = isLastNote ? cluster.ParityCrossEntropy : 0;
+
+                    double totalCrossEntropy = gapCrossEntropy + internalCrossEntropy + parityCrossEntropy;
 
                     // Combine using tunable weights
-                    double combined = surprisal_factor * normSurprisal
-                                      + entropy_factor * normNodalEntropy;
+                    double combined = surprisal_factor * totalSurprisal
+                                      + cross_entropy_factor * totalCrossEntropy;
 
                     // Apply time scaling
                     double timeScale = 1000.0 / Math.Max(current.DeltaTime, 1.0);
