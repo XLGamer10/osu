@@ -65,7 +65,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                     // Apply time scaling
                     double timeScale = 1000.0 / Math.Max(current.DeltaTime, 1.0);
 
-                    totalWeightedComplexity += overall_multiplier * combined * timeScale;
+                    // Due to the above time scaling, doubletapness must also be used
+                    var osuObjNext = (OsuDifficultyHitObject)osuObj.Next(0);
+                    double doubletapness = 1 - osuObj.GetDoubletapness(osuObjNext);
+
+                    totalWeightedComplexity += overall_multiplier * combined * timeScale * doubletapness;
                 }
             }
 
