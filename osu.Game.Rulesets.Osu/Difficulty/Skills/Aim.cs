@@ -162,7 +162,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             // These notes will not contribute to the difficulty.
             double[] difficulties = ObjectDifficulties.Where(p => p > 0).ToArray();
             double[] difficultiesCopy = difficulties; // Created because .Sort() only accepts one extra array to sort while we need to sort two
-            double[] deltaTimes = deltaTimesList.ToArray();
+            double[] deltaTimes = deltaTimesList.Select(p => p / timeWeightSize).ToArray();
             double[] startTimes = startTimesList.ToArray();
 
             if (difficulties.Length == 0)
@@ -184,12 +184,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             {
                 // Use a harmonic sum that considers each note of the map according to a predefined weight.
                 double weight = (1 + HarmonicScale / (1 + time)) / (Math.Pow(time, DecayExponent) + 1 + HarmonicScale / (1 + time))
-                                * deltaTimes[index] / timeWeightSize // To ensure that multiple fast notes are weighted the same as a slow note
+                                * deltaTimes[index] // To ensure that multiple fast notes are weighted the same as a slow note
                                 * Math.Log(startTimes[index] + startTimeInfluence, startTimeInfluence); // Buff difficult notes later on in the map
 
                 NoteWeightSum += weight;
                 difficulty += note * weight;
-                time += deltaTimes[index] / timeWeightSize;
+                time += deltaTimes[index];
                 index += 1;
             }
 
