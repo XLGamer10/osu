@@ -3,6 +3,7 @@
 
 using System;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
+using osu.Game.Rulesets.Difficulty.Utils;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Objects;
 
@@ -16,6 +17,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         private const double overall_multiplier = 1.0;
         private const double surprisal_to_cross_entropy_ratio = 0.5; // Lower value will make this more in favor of cross entropy
         private const int window_size = 4; // Pull this from OsuRhythmDifficultyPreprocessor constants later...
+        private const double min_bpm_threshold = 210.0;
 
         public static double EvaluateDifficultyOf(DifficultyHitObject current)
         {
@@ -62,14 +64,18 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                     double combined = surprisal_factor * totalSurprisal
                                       + cross_entropy_factor * totalCrossEntropy;
 
-                    // Apply time scaling
+                    // Apply time scaling with additional penalty for low speed rhythm (brute-forceable)
                     double timeScale = 1000.0 / Math.Max(current.DeltaTime, 1.0);
+
+                    double strainThreshold = DifficultyCalculationUtils.BPMToMilliseconds(min_bpm_threshold);
+
+                    double lowEndSuppression = Math.Pow(Math.Min(1.0, strainThreshold / current.DeltaTime), 2.0);
 
                     // Due to the above time scaling, doubletapness must also be used
                     var osuObjNext = (OsuDifficultyHitObject)osuObj.Next(0);
                     double doubletapness = 1 - osuObj.GetDoubletapness(osuObjNext);
 
-                    totalWeightedComplexity += overall_multiplier * combined * timeScale * doubletapness;
+                    totalWeightedComplexity += overall_multiplier * combined * timeScale * lowEndSuppression * doubletapness;
                 }
             }
 

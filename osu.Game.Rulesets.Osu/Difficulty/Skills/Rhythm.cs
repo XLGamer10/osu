@@ -16,7 +16,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// </summary>
     public class Rhythm : HarmonicSkill
     {
-        private double skillMultiplier => 11.5;
+        private double skillMultiplier => 20.0;
 
         private double currentDifficulty;
 
