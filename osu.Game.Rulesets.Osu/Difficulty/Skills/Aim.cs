@@ -30,8 +30,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double currentStrain;
 
-        protected override double HarmonicScale => 25;
-        protected override double DecayExponent => 1.00;
+        protected override double HarmonicScale => 35;
+        protected override double DecayExponent => 0.95;
 
         private double skillMultiplierSnap => 77.7;
         private double skillMultiplierAgility => 3.85;
@@ -168,6 +168,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (difficulties.Length == 0)
                 return 0;
 
+            double mapLength = startTimes[^1] / 1000;
+
             ApplyDifficultyTransformation(difficulties);
 
             Array.Sort(difficulties, deltaTimes); // Sorts the difficulties and deltaTimes arrays according to difficulties
@@ -185,7 +187,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 // Use a harmonic sum that considers each note of the map according to a predefined weight.
                 double weight = (1 + HarmonicScale / (1 + time)) / (Math.Pow(time, DecayExponent) + 1 + HarmonicScale / (1 + time))
                                 * deltaTimes[index] // To ensure that multiple fast notes are weighted the same as a slow note
-                                * Math.Log(startTimes[index] + startTimeInfluence, startTimeInfluence); // Buff difficult notes later on in the map
+                                * Math.Log(startTimes[index] + startTimeInfluence, startTimeInfluence) // Buff difficult notes later on in the map
+                                * (1 + 1 / (0.2 + mapLength)); // unnerf very short maps;
 
                 NoteWeightSum += weight;
                 difficulty += note * weight;
