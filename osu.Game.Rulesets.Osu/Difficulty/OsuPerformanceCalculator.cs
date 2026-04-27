@@ -289,7 +289,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             // Lots of arbitrary values from testing.
             // Considering to use derivation from perfect accuracy in a probabilistic manner - assume normal distribution.
-            double accuracyValue = Math.Pow(1.52163, overallDifficulty) * Math.Pow(betterAccuracyPercentage, 24) * 2.83;
+            double accuracyValue = Math.Pow(1.52163, overallDifficulty) * Math.Pow(betterAccuracyPercentage, 24) * 1.93; // Previously 2.83
 
             // Bonus for many hitcircles - it's harder to keep good accuracy up for longer.
             accuracyValue *= amountHitObjectsWithAccuracy < 1000
@@ -333,9 +333,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private double computeRhythmValue(OsuDifficultyAttributes attributes)
         {
             if (attributes.RhythmDifficulty <= 0 || speedDeviation == null)
-                return Skills.Rhythm.DifficultyToPerformance(attributes.RhythmDifficulty);
+                return HarmonicSkill.DifficultyToPerformance(attributes.RhythmDifficulty);
 
-            double rhythmValue = Skills.Rhythm.DifficultyToPerformance(attributes.RhythmDifficulty);
+            double rhythmValue = HarmonicSkill.DifficultyToPerformance(attributes.RhythmDifficulty);
 
             if (effectiveMissCount > 0)
             {

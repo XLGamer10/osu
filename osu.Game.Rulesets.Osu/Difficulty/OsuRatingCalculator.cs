@@ -131,6 +131,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         public double ComputeRhythmRating(double rhythmDifficultyValue)
         {
+            if (mods.Any(m => m is OsuModRelax))
+                return 0;
+
             return CalculateDifficultyRating(rhythmDifficultyValue);
         }
 
