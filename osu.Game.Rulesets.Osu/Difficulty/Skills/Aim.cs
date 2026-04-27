@@ -39,8 +39,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double skillMultiplierTotal => 1.12;
         private double combinedSnapNormExponent => 1.2;
         private double maxDeltaTime => 5000;
-        private double timeWeightSize => 200;
-        private double startTimeInfluence => 500000;
+        private double timeWeightSpread => 200;
+        private double startTimeInfluence => 5000;
         private double weightExponent => 0.4;
 
         private readonly List<double> sliderStrains = new List<double>();
@@ -162,18 +162,19 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             // These notes will not contribute to the difficulty.
             double[] difficulties = ObjectDifficulties.Where(p => p > 0).ToArray();
             double[] difficultiesCopy = difficulties; // Created because .Sort() only accepts one extra array to sort while we need to sort two
-            double[] deltaTimes = deltaTimesList.ToArray();
             double[] startTimes = startTimesList.ToArray();
+            double mapLength = startTimes[startTimes.Length];
+            double[] weightedDeltaTimes = deltaTimesList.Select(p => p / mapLength * timeWeightSpread).ToArray();
 
             if (difficulties.Length == 0)
                 return 0;
 
             ApplyDifficultyTransformation(difficulties);
 
-            Array.Sort(difficulties, deltaTimes); // Sorts the difficulties and deltaTimes arrays according to difficulties
+            Array.Sort(difficulties, weightedDeltaTimes); // Sorts the difficulties and deltaTimes arrays according to difficulties
             Array.Sort(difficultiesCopy, startTimes); // Sorts startTimes in the same way as the above
             Array.Reverse(difficulties); // Descending order
-            Array.Reverse(deltaTimes);
+            Array.Reverse(weightedDeltaTimes);
             Array.Reverse(startTimes);
 
             double difficulty = 0;
@@ -184,12 +185,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             {
                 // Use a harmonic sum that considers each note of the map according to a predefined weight.
                 double weight = (1 + HarmonicScale / (1 + time)) / (Math.Pow(time, DecayExponent) + 1 + HarmonicScale / (1 + time))
-                                * deltaTimes[index] / timeWeightSize // To ensure that multiple fast notes are weighted the same as a slow note
-                                * Math.Log(startTimes[index] + startTimeInfluence, startTimeInfluence); // Buff difficult notes later on in the map
+                                * weightedDeltaTimes[index] // To ensure that multiple fast notes are weighted the same as a slow note
+                                * Math.Log(startTimes[index] + startTimeInfluence, startTimeInfluence); // Length bonus - Buff difficult notes later on in the map
 
                 NoteWeightSum += weight;
                 difficulty += note * weight;
-                time += deltaTimes[index] / timeWeightSize;
+                time += weightedDeltaTimes[index];
                 index += 1;
             }
 
