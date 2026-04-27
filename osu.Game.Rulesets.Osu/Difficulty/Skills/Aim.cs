@@ -162,7 +162,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             // These notes will not contribute to the difficulty.
             double[] difficulties = ObjectDifficulties.Where(p => p > 0).ToArray();
             double[] difficultiesCopy = difficulties; // Created because .Sort() only accepts one extra array to sort while we need to sort two
-            double[] deltaTimes = deltaTimesList.Select(p => p / timeWeightSize).ToArray();
+            double[] deltaTimes = deltaTimesList.Select(p => p / timeWeightSize).ToArray(); // Changes how much time fits within a section of the weighting function
             double[] startTimes = startTimesList.ToArray();
 
             if (difficulties.Length == 0)
@@ -188,7 +188,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 double weight = (1 + HarmonicScale / (1 + time)) / (Math.Pow(time, DecayExponent) + 1 + HarmonicScale / (1 + time))
                                 * deltaTimes[index] // To ensure that multiple fast notes are weighted the same as a slow note
                                 * Math.Log(startTimes[index] + startTimeInfluence, startTimeInfluence) // Buff difficult notes later on in the map
-                                * (1 + 1 / (1 + Math.Pow(mapLength, 0.5))); // unnerf very short maps;
+                                * (1 + 1 / (1 + Math.Pow(mapLength, 0.5))); // Buff short maps since they miss out on a lot of the high value weights;
 
                 NoteWeightSum += weight;
                 difficulty += note * weight;
@@ -201,7 +201,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         protected override void ApplyDifficultyTransformation(double[] difficulties)
         {
-            if (weightExponent <= 0) return; // just in case someone puts in a negative number
+            if (weightExponent <= 0) return; // Just in case someone puts in a negative number
 
             double peakDifficulty = difficulties.Max();
 
