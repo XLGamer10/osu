@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using osu.Framework.Utils;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Skills;
 using osu.Game.Rulesets.Difficulty.Utils;
@@ -18,7 +19,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// <summary>
     /// Represents the skill required to correctly aim at every object in the map with a uniform CircleSize and normalized distances.
     /// </summary>
-    public class Aim : HarmonicSkill
+    public class Aim : VariableLengthStrainSkill
     {
         public readonly bool IncludeSliders;
 
@@ -30,26 +31,31 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double currentStrain;
 
-        protected override double HarmonicScale => 25;
-        protected override double DecayExponent => 1.00;
-
-        private double skillMultiplierSnap => 77.7;
-        private double skillMultiplierAgility => 3.85;
-        private double skillMultiplierFlow => 307.0;
+        private double skillMultiplierSnap => 70.9;
+        private double skillMultiplierAgility => 2.35;
+        private double skillMultiplierFlow => 242.0;
         private double skillMultiplierTotal => 1.12;
         private double combinedSnapNormExponent => 1.2;
-        private double maxDeltaTime => 5000;
-        private double timeWeightSize => 200;
-        private double startTimeInfluence => 500000;
-        private double weightExponent => 0.4;
+
+        /// <summary>
+        /// The number of sections with the highest strains, which the peak strain reductions will apply to.
+        /// This is done in order to decrease their impact on the overall difficulty of the map for this skill.
+        /// </summary>
+        private int reducedSectionTime => 4000;
+
+        /// <summary>
+        /// The baseline multiplier applied to the section with the biggest strain.
+        /// </summary>
+        private double reducedStrainBaseline => 0.727;
 
         private readonly List<double> sliderStrains = new List<double>();
-        private readonly List<double> deltaTimesList = new List<double>();
-        private readonly List<double> startTimesList = new List<double>();
 
         private double strainDecay(double ms) => Math.Pow(0.2, ms / 1000);
 
-        protected override double ObjectDifficultyOf(DifficultyHitObject current)
+        protected override double CalculateInitialStrain(double time, DifficultyHitObject current) =>
+            currentStrain * strainDecay(time - current.Previous(0).StartTime);
+
+        protected override double StrainValueAt(DifficultyHitObject current)
         {
             double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
 
@@ -64,11 +70,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             if (current.BaseObject is Slider)
                 sliderStrains.Add(currentStrain);
-
-            if (currentStrain <= 0) return currentStrain;
-
-            deltaTimesList.Add(Math.Min(((OsuDifficultyHitObject)current).AdjustedDeltaTime, maxDeltaTime));
-            startTimesList.Add(current.StartTime);
 
             return currentStrain;
         }
@@ -141,72 +142,92 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (sliderStrains.Count == 0)
                 return 0;
 
-            if (NoteWeightSum == 0)
-                return 0.0;
+            double consistentTopStrain = difficultyValue * (1 - DecayWeight); // What would the top strain be if all strain values were identical
 
-            double consistentTopNote = difficultyValue / NoteWeightSum; // What would the top note be if all note values were identical
-
-            if (consistentTopNote == 0)
+            if (consistentTopStrain == 0)
                 return 0;
 
-            // Use a weighted sum of all notes. Constants are arbitrary and give nice values
-            return sliderStrains.Sum(s => DifficultyCalculationUtils.Logistic(s / consistentTopNote, 0.88, 10, 1.1));
+            // Use a weighted sum of all strains. Constants are arbitrary and give nice values
+            return sliderStrains.Sum(s => DifficultyCalculationUtils.Logistic(s / consistentTopStrain, 0.88, 10, 1.1));
         }
 
         public override double DifficultyValue()
         {
-            if (ObjectDifficulties.Count == 0)
-                return 0;
-
-            // Notes with 0 difficulty are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
-            // These notes will not contribute to the difficulty.
-            double[] difficulties = ObjectDifficulties.Where(p => p > 0).ToArray();
-            double[] difficultiesCopy = difficulties; // Created because .Sort() only accepts one extra array to sort while we need to sort two
-            double[] deltaTimes = deltaTimesList.ToArray();
-            double[] startTimes = startTimesList.ToArray();
-
-            if (difficulties.Length == 0)
-                return 0;
-
-            ApplyDifficultyTransformation(difficulties);
-
-            Array.Sort(difficulties, deltaTimes); // Sorts the difficulties and deltaTimes arrays according to difficulties
-            Array.Sort(difficultiesCopy, startTimes); // Sorts startTimes in the same way as the above
-            Array.Reverse(difficulties); // Descending order
-            Array.Reverse(deltaTimes);
-            Array.Reverse(startTimes);
-
             double difficulty = 0;
             double time = 0;
-            int index = 0;
 
-            foreach (double note in difficulties)
+            var strains = getReducedStrainPeaks();
+
+            // Difficulty is a continuous weighted sum of the sorted strains
+            foreach (StrainPeak strain in strains)
             {
-                // Use a harmonic sum that considers each note of the map according to a predefined weight.
-                double weight = (1 + HarmonicScale / (1 + time)) / (Math.Pow(time, DecayExponent) + 1 + HarmonicScale / (1 + time))
-                                * deltaTimes[index] / timeWeightSize // To ensure that multiple fast notes are weighted the same as a slow note
-                                * Math.Log(startTimes[index] + startTimeInfluence, startTimeInfluence); // Buff difficult notes later on in the map
+                /* Weighting function can be thought of as:
+                        b
+                        ∫ DecayWeight^x dx
+                        a
+                    where a = startTime and b = endTime
 
-                NoteWeightSum += weight;
-                difficulty += note * weight;
-                time += deltaTimes[index] / timeWeightSize;
-                index += 1;
+                    Technically, the function below has been slightly modified from the equation above.
+                    The real function would be
+                        double weight = Math.Pow(DecayWeight, startTime) - Math.Pow(DecayWeight, endTime);
+                        ...
+                        return difficulty / Math.Log(1 / DecayWeight);
+                    E.g. for a DecayWeight of 0.9, we're multiplying by 10 instead of 9.49122...
+
+                    This change makes it so that a map composed solely of MaxSectionLength chunks will have the exact same value when summed in this class and StrainSkill.
+                    Doing this ensures the relationship between strain values and difficulty values remains the same between the two classes.
+                */
+                double startTime = time;
+                double endTime = time + strain.SectionLength / MaxSectionLength;
+
+                double weight = Math.Pow(DecayWeight, startTime) - Math.Pow(DecayWeight, endTime);
+
+                difficulty += strain.Value * weight;
+                time = endTime;
             }
 
-            return difficulty;
+            return difficulty / (1 - DecayWeight);
         }
 
-        protected override void ApplyDifficultyTransformation(double[] difficulties)
+        /// <summary>
+        /// Returns a sorted enumerable of strain peaks with the highest values reduced.
+        /// </summary>
+        /// <returns></returns>
+        private IEnumerable<StrainPeak> getReducedStrainPeaks()
         {
-            if (weightExponent <= 0) return; // just in case someone puts in a negative number
+            // Sections with 0 strain are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
+            // These sections will not contribute to the difficulty.
+            var peaks = GetCurrentStrainPeaks().Where(p => p.Value > 0);
 
-            double peakDifficulty = difficulties.Max();
+            List<StrainPeak> strains = peaks.OrderByDescending(p => p.Value).ToList();
 
-            // Reduce the difficulty of notes that are easier than the most difficult object
-            for (int i = 0; i < difficulties.Length; i++)
+            const int chunk_size = 20;
+            double time = 0;
+            int strainsToRemove = 0; // All strains are removed at the end for optimization purposes
+
+            // We are reducing the highest strains first to account for extreme difficulty spikes
+            // Strains are split into 20ms chunks to try to mitigate inconsistencies caused by reducing strains
+            while (strains.Count > strainsToRemove && time < reducedSectionTime)
             {
-                difficulties[i] *= Math.Pow(difficulties[i], weightExponent) / Math.Pow(peakDifficulty, weightExponent);
+                StrainPeak strain = strains[strainsToRemove];
+
+                for (double addedTime = 0; addedTime < strain.SectionLength; addedTime += chunk_size)
+                {
+                    double scale = Math.Log10(Interpolation.Lerp(1, 10, Math.Clamp((time + addedTime) / reducedSectionTime, 0, 1)));
+
+                    strains.Add(new StrainPeak(
+                        strain.Value * Interpolation.Lerp(reducedStrainBaseline, 1.0, scale),
+                        Math.Min(chunk_size, strain.SectionLength - addedTime)
+                    ));
+                }
+
+                time += strain.SectionLength;
+                strainsToRemove++;
             }
+
+            strains.RemoveRange(0, strainsToRemove);
+
+            return strains.OrderByDescending(p => p.Value);
         }
     }
 }
