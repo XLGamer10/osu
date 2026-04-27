@@ -39,9 +39,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double skillMultiplierTotal => 1.12;
         private double combinedSnapNormExponent => 1.2;
         private double maxDeltaTime => 5000;
-        private double timeWeightSpread => 200;
-        private double startTimeInfluence => 5000;
-        private double weightExponent => 0.4;
+        private double timeWeightSpread => 50;
+        private double startTimeInfluence => 2;
+        private double weightExponent => 0.5;
 
         private readonly List<double> sliderStrains = new List<double>();
         private readonly List<double> deltaTimesList = new List<double>();
@@ -163,7 +163,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             double[] difficulties = ObjectDifficulties.Where(p => p > 0).ToArray();
             double[] difficultiesCopy = difficulties; // Created because .Sort() only accepts one extra array to sort while we need to sort two
             double[] startTimes = startTimesList.ToArray();
-            double mapLength = startTimes[startTimes.Length];
+            double mapLength = startTimes[^1];
             double[] weightedDeltaTimes = deltaTimesList.Select(p => p / mapLength * timeWeightSpread).ToArray();
 
             if (difficulties.Length == 0)
@@ -184,7 +184,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             foreach (double note in difficulties)
             {
                 // Use a harmonic sum that considers each note of the map according to a predefined weight.
-                double weight = (1 + HarmonicScale / (1 + time)) / (Math.Pow(time, DecayExponent) + 1 + HarmonicScale / (1 + time))
+                double weight = (1 + HarmonicScale / (1 + time)) / (Math.Pow(time, DecayExponent) + 1 + HarmonicScale / (1 + time)) // Consistency weighting
                                 * weightedDeltaTimes[index] // To ensure that multiple fast notes are weighted the same as a slow note
                                 * Math.Log(startTimes[index] + startTimeInfluence, startTimeInfluence); // Length bonus - Buff difficult notes later on in the map
 
