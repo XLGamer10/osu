@@ -12,7 +12,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
 {
     public static class OsuRhythmDifficultyPreprocessor
     {
-        private const int ctw_max_depth = 8;
+        private const int ctw_max_depth = 4;
         private const double ctw_epsilon_factor = 0.3;
 
         private readonly struct RhythmEvent

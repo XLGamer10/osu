@@ -13,9 +13,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
     /// </summary>
     public static class RhythmEvaluator
     {
-        private const double surprisal_factor = 0.5;
-        private const double cross_entropy_factor = 0.5;
-        private const int window_size = 8; // Pull this from OsuRhythmDifficultyPreprocessor constants later...
+        private const double overall_multiplier = 1.0;
+        private const double surprisal_to_cross_entropy_ratio = 0.5; // Lower value will make this more in favor of cross entropy
+        private const int window_size = 4; // Pull this from OsuRhythmDifficultyPreprocessor constants later...
 
         public static double EvaluateDifficultyOf(DifficultyHitObject current)
         {
@@ -57,13 +57,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                     double totalCrossEntropy = gapCrossEntropy + internalCrossEntropy + parityCrossEntropy;
 
                     // Combine using tunable weights
+                    const double surprisal_factor = 1 - 1 / (surprisal_to_cross_entropy_ratio + 1);
+                    const double cross_entropy_factor = 1 / (surprisal_to_cross_entropy_ratio + 1);
                     double combined = surprisal_factor * totalSurprisal
                                       + cross_entropy_factor * totalCrossEntropy;
 
                     // Apply time scaling
                     double timeScale = 1000.0 / Math.Max(current.DeltaTime, 1.0);
 
-                    totalWeightedComplexity += combined * timeScale;
+                    totalWeightedComplexity += overall_multiplier * combined * timeScale;
                 }
             }
 

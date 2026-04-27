@@ -138,37 +138,37 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
         private static double[] generateRatioPrior()
         {
             double[] prior = new double[31];
-            double total = 0;
 
-            double logMin = Math.Log(1.0 / 16.0);
-            double logMax = Math.Log(16.0);
-            double binWidth = (logMax - logMin) / 31;
+            for (int i = 0; i < 31; i++) prior[i] = 0.1;
 
-            for (int i = 0; i < 31; i++)
+            var anchors = new (double ratio, double weight)[]
             {
-                // Find the center of the log-bin
-                double logRatioAtBin = logMin + (i + 0.5) * binWidth;
-                double ratio = Math.Exp(logRatioAtBin);
+                (1.0, 0.70),
+                (0.5, 0.25), (2.0, 0.25),
+                (0.33, 0.15), (3.0, 0.15),
+                (0.66, 0.10), (1.5, 0.10)
+            };
 
-                // Start with a small noise floor to prevent division by zero
-                double weight = 0.01;
+            foreach (var anchor in anchors)
+            {
+                int bin = RhythmSymbolQuantizer.QuantizeRatio(anchor.ratio, 1.0, 0);
+                prior[bin] += anchor.weight;
 
-                if (isClose(ratio, 1.0)) weight += 0.60; // 1:1
-                else if (isClose(ratio, 0.5) || isClose(ratio, 2.0)) weight += 0.20; // 1:2 or 2:1
-                else if (isClose(ratio, 0.33) || isClose(ratio, 3.0)) weight += 0.10; // 1:3 or 3:1
-                else if (isClose(ratio, 0.66) || isClose(ratio, 1.5)) weight += 0.05; // 2:3 or 3:2
-
-                prior[i] = weight;
-                total += weight;
+                if (bin > 0) prior[bin - 1] += anchor.weight * 0.5;
+                if (bin < 30) prior[bin + 1] += anchor.weight * 0.5;
             }
 
-            // Normalize so the distribution sums to 1.0
+            double total = 0;
+
+            foreach (double weights in prior)
+            {
+                total += weights;
+            }
+
             for (int i = 0; i < 31; i++) prior[i] /= total;
 
             return prior;
         }
-
-        private static bool isClose(double a, double b) => Math.Abs(a - b) < 0.08;
     }
 
     public class ContextTreeWeighting
@@ -178,6 +178,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
         private readonly CtwNode root;
         private readonly int[] contextBuffer;
         private readonly double[] prior;
+        private readonly double priorBaseEntropy;
         private int bufferCount;
 
         public ContextTreeWeighting(int maxDepth, int alphabetSize, double[] prior)
@@ -185,6 +186,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
             this.maxDepth = maxDepth;
             this.alphabetSize = alphabetSize;
             this.prior = prior;
+
+            priorBaseEntropy = 0;
+
+            foreach (double q in prior)
+            {
+                if (q > 0)
+                    priorBaseEntropy -= q * Math.Log(q, 2);
+            }
+
             root = new CtwNode(alphabetSize);
             contextBuffer = new int[maxDepth];
         }
@@ -266,8 +276,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
                 crossEntropy += p * -Math.Log(q, 2);
             }
 
-            const double prior_base_entropy = 1.5;
-            double finalCrossEntropy = Math.Max(0, crossEntropy - prior_base_entropy);
+            double finalCrossEntropy = Math.Max(0, crossEntropy - priorBaseEntropy);
 
             // Update the sliding context window
             contextBuffer[bufferCount % maxDepth] = symbol;
@@ -276,7 +285,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
             return new EvaluationResult
             {
                 Surprisal = surprisal,
-                CrossEntropy = Math.Max(0, crossEntropy)
+                CrossEntropy = finalCrossEntropy
             };
         }
 
