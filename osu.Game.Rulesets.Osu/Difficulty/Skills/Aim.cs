@@ -31,7 +31,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double currentStrain;
 
         protected override double HarmonicScale => 35;
-        protected override double DecayExponent => 0.95;
+        protected override double DecayExponent => 0.90;
 
         private double skillMultiplierSnap => 77.7;
         private double skillMultiplierAgility => 3.85;
@@ -188,7 +188,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 double weight = (1 + HarmonicScale / (1 + time)) / (Math.Pow(time, DecayExponent) + 1 + HarmonicScale / (1 + time))
                                 * deltaTimes[index] // To ensure that multiple fast notes are weighted the same as a slow note
                                 * Math.Log(startTimes[index] + startTimeInfluence, startTimeInfluence) // Buff difficult notes later on in the map
-                                * (1 + 1 / (0.2 + mapLength)); // unnerf very short maps;
+                                * (1 + 1 / (1 + Math.Pow(mapLength, 0.5))); // unnerf very short maps;
 
                 NoteWeightSum += weight;
                 difficulty += note * weight;

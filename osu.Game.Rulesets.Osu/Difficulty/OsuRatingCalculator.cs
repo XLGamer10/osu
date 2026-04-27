@@ -29,7 +29,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (mods.Any(m => m is OsuModAutopilot))
                 return 0;
 
-            double aimRating = Math.Pow(aimDifficultyValue, 0.675) * 0.01167;
+            double aimRating = Math.Pow(aimDifficultyValue, 0.670) * 0.01095;
 
             if (mods.Any(m => m is OsuModMagnetised))
             {
