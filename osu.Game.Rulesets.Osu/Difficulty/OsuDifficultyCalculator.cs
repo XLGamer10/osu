@@ -97,6 +97,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double aimRating = osuRatingCalculator.ComputeAimRating(aimDifficultyValue);
             double speedRating = osuRatingCalculator.ComputeSpeedRating(speedDifficultyValue);
             double rhythmRating = osuRatingCalculator.ComputeRhythmRating(rhythmDifficultyValue);
+            double rhythmNormalizedVariance = rhythm.RhythmNormalizedVariance;
             double readingRating = osuRatingCalculator.ComputeReadingRating(readingDifficultyValue);
 
             double flashlightRating = 0.0;
@@ -130,6 +131,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 SpeedNoteCount = speedNotes,
                 FlashlightDifficulty = flashlightRating,
                 RhythmDifficulty = rhythmRating,
+                RhythmNormalizedVariance = rhythmNormalizedVariance,
                 ReadingDifficulty = readingRating,
                 SliderFactor = sliderFactor,
                 AimDifficultStrainCount = aimDifficultStrainCount,

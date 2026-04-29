@@ -58,6 +58,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         public double RhythmDifficulty { get; set; }
 
         /// <summary>
+        /// The normalized note to note variance of the rhythm skill.
+        /// </summary>
+        [JsonProperty("rhythm_normalized_variance")]
+        public double RhythmNormalizedVariance { get; set; }
+
+        /// <summary>
         /// Describes how much of <see cref="AimDifficulty"/> is contributed to by hitcircles or sliders.
         /// A value closer to 1.0 indicates most of <see cref="AimDifficulty"/> is contributed by hitcircles.
         /// A value closer to 0.0 indicates most of <see cref="AimDifficulty"/> is contributed by sliders.

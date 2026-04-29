@@ -337,17 +337,24 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double rhythmValue = HarmonicSkill.DifficultyToPerformance(attributes.RhythmDifficulty);
 
-            if (effectiveMissCount > 0)
-            {
-                double relevantMissCount = Math.Min(effectiveMissCount + speedEstimatedSliderBreaks, totalImperfectHits + countSliderTickMiss);
-                rhythmValue *= calculateMissPenalty(relevantMissCount, attributes.SpeedDifficultStrainCount);
-            }
+            // Scaling based on coefficient of variation CV
+            // Low CV (consistent difficulty) -> lower kFactor -> stricter hit window
+            // High CV (spiky difficulty) -> higher kFactor -> lenient hit window
+            // Expected CV range is typically 0.2 (very consistent) to 1.5+ (very spiky).
+            double kFactor = Math.Clamp(0.35 + (attributes.RhythmNormalizedVariance * 0.2), 0.35, 0.6);
 
-            // Use the same effective hit window approach as speed
-            double effectiveHitWindow = 20 * Math.Pow(4 / attributes.RhythmDifficulty, 0.35);
+            double effectiveHitWindow = 20 * Math.Pow(4 / attributes.RhythmDifficulty, kFactor);
             double effectiveAccuracy = DifficultyCalculationUtils.Erf(effectiveHitWindow / (double)speedDeviation);
 
-            rhythmValue *= Math.Pow(effectiveAccuracy, 2);
+            // Maintain high power to penalize mashing on technical patterns
+            rhythmValue *= Math.Pow(effectiveAccuracy, 5.0);
+
+            if (effectiveMissCount > 0)
+            {
+                double relevantMissCount = Math.Min(effectiveMissCount + speedEstimatedSliderBreaks,
+                    totalImperfectHits + countSliderTickMiss);
+                rhythmValue *= calculateMissPenalty(relevantMissCount, attributes.SpeedDifficultStrainCount);
+            }
 
             return rhythmValue;
         }

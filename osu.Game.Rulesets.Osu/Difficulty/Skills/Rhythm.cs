@@ -16,11 +16,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// </summary>
     public class Rhythm : HarmonicSkill
     {
-        private double skillMultiplier => 9.0;
+        private double skillMultiplier => 9.2;
 
         private double currentDifficulty;
 
         private double strainDecayBase => 0.2;
+
+        public double RhythmNormalizedVariance { get; private set; }
 
         protected override double HarmonicScale => 25;
         protected override double DecayExponent => 0.75;
@@ -40,6 +42,24 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             currentDifficulty += RhythmEvaluator.EvaluateDifficultyOf(current) * (1 - decay) * skillMultiplier;
 
             return currentDifficulty;
+        }
+
+        public override double DifficultyValue()
+        {
+            double val = base.DifficultyValue();
+
+            var list = ObjectDifficulties.Where(d => d > 0).ToList();
+
+            if (list.Count > 0)
+            {
+                double mean = list.Average();
+                double variance = list.Select(d => Math.Pow(d - mean, 2)).Average();
+                double stdDev = Math.Sqrt(variance);
+
+                RhythmNormalizedVariance = mean > 0 ? stdDev / mean : 0;
+            }
+
+            return val;
         }
 
         public double RelevantNoteCount()

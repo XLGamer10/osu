@@ -12,7 +12,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
 {
     public static class OsuRhythmDifficultyPreprocessor
     {
-        private const int ctw_max_depth = 4;
+        private const int ctw_max_depth = 3;
         private const double ctw_epsilon_factor = 0.3;
 
         private readonly struct RhythmEvent
@@ -276,8 +276,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
             var internalCtwCloned = internalCtw.Clone();
 
             int count = cluster.Count - startOffset;
-            int pSym = count % 2;
-            double paritySurprisal = parityCtwCloned.UpdateTreeNode(pSym);
+            int paritySymbol = count % 2;
+            double paritySurprisal = parityCtwCloned.UpdateTreeNode(paritySymbol);
 
             double gapDelta = Math.Max(cluster[startOffset].Delta, 1e-7);
             double epsilon = cluster[startOffset].HitWindow * ctw_epsilon_factor;
@@ -293,7 +293,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing.Rhythm
             return new ConstructionResult
             {
                 Surprise = paritySurprisal + gapSurprisal + internalSurprisal,
-                ParitySymbol = pSym, GapSymbol = gapSymbol, InternalSymbol = internalSymbol,
+                ParitySymbol = paritySymbol, GapSymbol = gapSymbol, InternalSymbol = internalSymbol,
                 PrevGap = gapDelta, PrevInternalDelta = count > 1 ? internalDelta : prevInternalDelta
             };
         }

@@ -17,7 +17,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
     {
         private const double overall_multiplier = 1.0;
         private const double surprisal_to_cross_entropy_ratio = 0.5; // Lower value will make this more in favor of cross entropy
-        private const int window_size = 4; // Pull this from OsuRhythmDifficultyPreprocessor constants later...
+        private const int window_size = 3; // Pull this from OsuRhythmDifficultyPreprocessor constants later...
         private const double min_bpm_threshold = 210.0;
         private const double rhythm_ratio_multiplier = 12.0;
 
