@@ -285,7 +285,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double skillGreat = 0.0;
             double skillOk = 0.0;
             double skillMeh = 0.0;
-            double lengthAdjust = Math.Pow(totalHits * 0.003, 0.4);
+            double lengthAdjust = Math.Pow(totalHits * 0.002727, 0.5);
             if (countGreat > 0)
                 skillGreat = Math.Max(0.0, inferenceAccuracySkillBayesian((totalHits - countGreat) / lengthAdjust, totalHits, accuracyDifficulty));
             if (countOk > 0)
@@ -294,10 +294,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 skillMeh = Math.Max(0.0, inferenceAccuracySkillBayesian(totalHits - countGreat - countOk - countMeh, totalHits - countGreat - countOk, Math.Pow(accuracyDifficulty, mehPower)));
 
             double accuracyValue = DifficultyCalculationUtils.Norm(2, skillGreat, skillMeh, skillOk);
-            accuracyValue = Math.Pow(accuracyValue, 0.2) - 3 + 1.67;
+            accuracyValue = Math.Pow(accuracyValue, 0.24) - 3 + 1.67;
             double overallDifficultyAdjustment = -Math.Pow(Math.Abs(overallDifficulty/10), 0.98) * Math.Pow(1.01, overallDifficulty) + (overallDifficulty < 0 ? Math.Pow(-overallDifficulty, 0.9) / 5.5 : 0);
             accuracyValue += overallDifficultyAdjustment;
-            accuracyValue *= 8;
+            accuracyValue *= 7.27;
             accuracyValue = Math.Max(0, accuracyValue);
             return accuracyValue;
         }
@@ -528,7 +528,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         // to make it more punishing on maps with lower amount of hard sections.
         private double calculateMissPenalty(double missCount, double difficultStrainCount) => 0.93 / (missCount / (4 * Math.Log(difficultStrainCount)) + 1);
         private double getComboScalingFactor(OsuDifficultyAttributes attributes) => attributes.MaxCombo <= 0 ? 1.0 : Math.Min(Math.Pow(scoreMaxCombo, 0.8) / Math.Pow(attributes.MaxCombo, 0.8), 1.0);
-        private double inferenceAccuracySkillBayesian(double amountWorseJudgements, int amountJudgements, double objectAccuracyDifficulty, double confidence = 0.50) => objectAccuracyDifficulty / Math.Log(1 + (Gamma.InvCDF(amountWorseJudgements + 1 + 5, 1, 0.01) / amountJudgements));
+        private double inferenceAccuracySkillBayesian(double amountWorseJudgements, int amountJudgements, double objectAccuracyDifficulty, double confidence = 0.99) => objectAccuracyDifficulty / Math.Log(1 + (Gamma.InvCDF(amountWorseJudgements + 1 + 5, 1, confidence) / amountJudgements));
 
         private int totalHits => countGreat + countOk + countMeh + countMiss;
         private int totalSuccessfulHits => countGreat + countOk + countMeh;
