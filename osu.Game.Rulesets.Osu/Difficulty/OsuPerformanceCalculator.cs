@@ -15,6 +15,8 @@ using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Scoring;
 using osu.Game.Utils;
+using System.Numerics;
+using MathNet.Numerics.Distributions;
 
 namespace osu.Game.Rulesets.Osu.Difficulty
 {
@@ -267,45 +269,36 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private double computeAccuracyValue(ScoreInfo score, OsuDifficultyAttributes attributes)
         {
+
             if (score.Mods.Any(h => h is OsuModRelax))
                 return 0.0;
 
-            // This percentage only considers HitCircles of any value - in this part of the calculation we focus on hitting the timing hit window.
-            double betterAccuracyPercentage;
             int amountHitObjectsWithAccuracy = attributes.HitCircleCount;
             if (!usingClassicSliderAccuracy || usingScoreV2)
                 amountHitObjectsWithAccuracy += attributes.SliderCount;
+            if (amountHitObjectsWithAccuracy == 0)
+                return 0.0;
 
-            if (amountHitObjectsWithAccuracy > 0)
-                betterAccuracyPercentage = ((countGreat - Math.Max(totalHits - amountHitObjectsWithAccuracy, 0)) * 6 + countOk * 2 + countMeh) / (double)(amountHitObjectsWithAccuracy * 6);
-            else
-                betterAccuracyPercentage = 0;
+            double accuracyDifficulty = Math.Pow(2.1, overallDifficulty) * 3;
+            double okPower = 0.2;
+            double mehPower = 0.1;
+            double skillGreat = 0.0;
+            double skillOk = 0.0;
+            double skillMeh = 0.0;
+            double lengthAdjust = Math.Pow(totalHits * 0.003, 0.4);
+            if (countGreat > 0)
+                skillGreat = Math.Max(0.0, inferenceAccuracySkillBayesian((totalHits - countGreat) / lengthAdjust, totalHits, accuracyDifficulty));
+            if (countOk > 0)
+                skillOk = Math.Max(0.0, inferenceAccuracySkillBayesian(totalHits - countGreat - countOk, totalHits - countGreat, Math.Pow(accuracyDifficulty, okPower)));
+            if (countMeh > 0)
+                skillMeh = Math.Max(0.0, inferenceAccuracySkillBayesian(totalHits - countGreat - countOk - countMeh, totalHits - countGreat - countOk, Math.Pow(accuracyDifficulty, mehPower)));
 
-            // It is possible to reach a negative accuracy with this formula. Cap it at zero - zero points.
-            if (betterAccuracyPercentage < 0)
-                betterAccuracyPercentage = 0;
-
-            // Lots of arbitrary values from testing.
-            // Considering to use derivation from perfect accuracy in a probabilistic manner - assume normal distribution.
-            double accuracyValue = Math.Pow(1.52163, overallDifficulty) * Math.Pow(betterAccuracyPercentage, 24) * 2.83;
-
-            // Bonus for many hitcircles - it's harder to keep good accuracy up for longer.
-            accuracyValue *= amountHitObjectsWithAccuracy < 1000
-                ? Math.Pow(amountHitObjectsWithAccuracy / 1000.0, 0.3)
-                : Math.Pow(amountHitObjectsWithAccuracy / 1000.0, 0.1);
-
-            // Increasing the accuracy value by object count for Blinds isn't ideal, so the minimum buff is given.
-            if (score.Mods.Any(m => m is OsuModBlinds))
-                accuracyValue *= 1.14;
-            else if (score.Mods.Any(m => m is OsuModTraceable))
-            {
-                // Decrease bonus for AR > 10
-                accuracyValue *= 1 + 0.08 * DifficultyCalculationUtils.ReverseLerp(approachRate, 11.5, 10);
-            }
-
-            if (score.Mods.Any(m => m is OsuModFlashlight))
-                accuracyValue *= 1.02;
-
+            double accuracyValue = DifficultyCalculationUtils.Norm(2, skillGreat, skillMeh, skillOk);
+            accuracyValue = Math.Pow(accuracyValue, 0.2) - 3 + 1.67;
+            double overallDifficultyAdjustment = -Math.Pow(Math.Abs(overallDifficulty/10), 0.98) * Math.Pow(1.01, overallDifficulty) + (overallDifficulty < 0 ? Math.Pow(-overallDifficulty, 0.9) / 5.5 : 0);
+            accuracyValue += overallDifficultyAdjustment;
+            accuracyValue *= 8;
+            accuracyValue = Math.Max(0, accuracyValue);
             return accuracyValue;
         }
 
@@ -535,6 +528,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         // to make it more punishing on maps with lower amount of hard sections.
         private double calculateMissPenalty(double missCount, double difficultStrainCount) => 0.93 / (missCount / (4 * Math.Log(difficultStrainCount)) + 1);
         private double getComboScalingFactor(OsuDifficultyAttributes attributes) => attributes.MaxCombo <= 0 ? 1.0 : Math.Min(Math.Pow(scoreMaxCombo, 0.8) / Math.Pow(attributes.MaxCombo, 0.8), 1.0);
+        private double inferenceAccuracySkillBayesian(double amountWorseJudgements, int amountJudgements, double objectAccuracyDifficulty, double confidence = 0.50) => objectAccuracyDifficulty / Math.Log(1 + (Gamma.InvCDF(amountWorseJudgements + 1 + 5, 1, 0.01) / amountJudgements));
 
         private int totalHits => countGreat + countOk + countMeh + countMiss;
         private int totalSuccessfulHits => countGreat + countOk + countMeh;
