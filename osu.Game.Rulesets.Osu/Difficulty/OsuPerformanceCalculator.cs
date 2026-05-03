@@ -294,10 +294,23 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double accuracyValue = DifficultyCalculationUtils.Norm(2, skillGreat, skillOk, skillMeh);
 
             double skillOverall = inferenceSkillBayesian(amountHitObjectsWithAccuracy, totalImperfectHits, accuracyDifficulty, amountHitObjectsWithAccuracy);
-            double highAccuracyBuff = 0.9 + 0.2 * skillOverall / skillPerfect;
+            double highAccuracyBuff = 0.6 + 0.65 * skillOverall / skillPerfect;
 
             accuracyValue = Math.Max(0, accuracyValue);
             accuracyValue = Math.Pow(accuracyValue, 0.5) * 0.41 * highAccuracyBuff;
+
+            // Increasing the accuracy value by object count for Blinds isn't ideal, so the minimum buff is given.
+            if (score.Mods.Any(m => m is OsuModBlinds))
+                accuracyValue *= 1.14;
+            else if (score.Mods.Any(m => m is OsuModTraceable))
+            {
+                // Decrease bonus for AR > 10
+                accuracyValue *= 1 + 0.08 * DifficultyCalculationUtils.ReverseLerp(approachRate, 11.5, 10);
+            }
+
+            if (score.Mods.Any(m => m is OsuModFlashlight))
+                accuracyValue *= 1.02;
+
             return accuracyValue;
         }
 
