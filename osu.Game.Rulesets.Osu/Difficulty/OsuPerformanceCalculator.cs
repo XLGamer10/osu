@@ -279,26 +279,21 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (amountHitObjectsWithAccuracy == 0)
                 return 0.0;
 
-            double accuracyDifficulty = Math.Pow(2.1, overallDifficulty) * 3;
-            double okPower = 0.2;
-            double mehPower = 0.1;
+            double accuracyDifficulty = Math.Pow(1.52163, overallDifficulty) * 2.83;
+            accuracyDifficulty = Math.Pow(accuracyDifficulty, 1.3);
+
             double skillGreat = 0.0;
             double skillOk = 0.0;
             double skillMeh = 0.0;
-            double lengthAdjust = Math.Pow(totalHits * 0.002727, 0.5);
-            if (countGreat > 0)
-                skillGreat = Math.Max(0.0, inferenceAccuracySkillBayesian((totalHits - countGreat) / lengthAdjust, totalHits, accuracyDifficulty));
-            if (countOk > 0)
-                skillOk = Math.Max(0.0, inferenceAccuracySkillBayesian(totalHits - countGreat - countOk, totalHits - countGreat, Math.Pow(accuracyDifficulty, okPower)));
-            if (countMeh > 0)
-                skillMeh = Math.Max(0.0, inferenceAccuracySkillBayesian(totalHits - countGreat - countOk - countMeh, totalHits - countGreat - countOk, Math.Pow(accuracyDifficulty, mehPower)));
+
+            skillGreat = inferenceSkillBayesian(amountHitObjectsWithAccuracy, countOk + countMeh + countMiss, accuracyDifficulty, amountHitObjectsWithAccuracy);
+            skillOk = inferenceSkillBayesian(amountHitObjectsWithAccuracy - countGreat, countMeh + countMiss, accuracyDifficulty * 0.1, amountHitObjectsWithAccuracy);
+            skillOk = inferenceSkillBayesian(amountHitObjectsWithAccuracy - countGreat - countMeh, countMiss, accuracyDifficulty * 0.05, amountHitObjectsWithAccuracy);
 
             double accuracyValue = DifficultyCalculationUtils.Norm(2, skillGreat, skillMeh, skillOk);
-            accuracyValue = Math.Pow(accuracyValue, 0.24) - 3 + 1.67;
-            double overallDifficultyAdjustment = -Math.Pow(Math.Abs(overallDifficulty/10), 0.98) * Math.Pow(1.01, overallDifficulty) + (overallDifficulty < 0 ? Math.Pow(-overallDifficulty, 0.9) / 5.5 : 0);
-            accuracyValue += overallDifficultyAdjustment;
-            accuracyValue *= 7.27;
+
             accuracyValue = Math.Max(0, accuracyValue);
+            accuracyValue = Math.Pow(accuracyValue, 0.5) * 0.41;
             return accuracyValue;
         }
 
@@ -523,12 +518,26 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return traceableBonus;
         }
 
+        private double inferenceSkillBayesian(double objects, double imperfects, double objectDifficulty, double difficultObjects, double confidence = 0.99)
+        {
+            if (objects <= 0) return 0;
+
+            double adjustment = 1000;
+            if (imperfects > difficultObjects)
+                imperfects = difficultObjects + Math.Pow(imperfects - difficultObjects, 1.6);
+
+            double mu = Gamma.InvCDF(imperfects + 0.005 * (objects + adjustment), 1, confidence);
+            double k = objectDifficulty / Math.Log(1 + (mu / Math.Pow(objects, 1.2)));
+            double lerp = Math.Max(0, (objects - imperfects) / objects);
+
+            return k * lerp;
+        }
+
         // Miss penalty assumes that a player will miss on the hardest parts of a map,
         // so we use the amount of relatively difficult sections to adjust miss penalty
         // to make it more punishing on maps with lower amount of hard sections.
         private double calculateMissPenalty(double missCount, double difficultStrainCount) => 0.93 / (missCount / (4 * Math.Log(difficultStrainCount)) + 1);
         private double getComboScalingFactor(OsuDifficultyAttributes attributes) => attributes.MaxCombo <= 0 ? 1.0 : Math.Min(Math.Pow(scoreMaxCombo, 0.8) / Math.Pow(attributes.MaxCombo, 0.8), 1.0);
-        private double inferenceAccuracySkillBayesian(double amountWorseJudgements, int amountJudgements, double objectAccuracyDifficulty, double confidence = 0.99) => objectAccuracyDifficulty / Math.Log(1 + (Gamma.InvCDF(amountWorseJudgements + 1 + 5, 1, confidence) / amountJudgements));
 
         private int totalHits => countGreat + countOk + countMeh + countMiss;
         private int totalSuccessfulHits => countGreat + countOk + countMeh;
