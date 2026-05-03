@@ -282,18 +282,22 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double accuracyDifficulty = Math.Pow(1.52163, overallDifficulty) * 2.83;
             accuracyDifficulty = Math.Pow(accuracyDifficulty, 1.3);
 
-            double skillGreat = 0.0;
-            double skillOk = 0.0;
-            double skillMeh = 0.0;
+            double skillGreat;
+            double skillOk;
+            double skillMeh;
 
-            skillGreat = inferenceSkillBayesian(amountHitObjectsWithAccuracy, countOk + countMeh + countMiss, accuracyDifficulty, amountHitObjectsWithAccuracy);
-            skillOk = inferenceSkillBayesian(amountHitObjectsWithAccuracy - countGreat, countMeh + countMiss, accuracyDifficulty * 0.1, amountHitObjectsWithAccuracy);
-            skillOk = inferenceSkillBayesian(amountHitObjectsWithAccuracy - countGreat - countMeh, countMiss, accuracyDifficulty * 0.05, amountHitObjectsWithAccuracy);
+            double skillPerfect = inferenceSkillBayesian(amountHitObjectsWithAccuracy, 0, accuracyDifficulty, amountHitObjectsWithAccuracy * 0.2);
+            skillGreat = inferenceSkillBayesian(amountHitObjectsWithAccuracy, countOk + countMeh + countMiss, accuracyDifficulty, amountHitObjectsWithAccuracy * 0.2);
+            skillOk = inferenceSkillBayesian(amountHitObjectsWithAccuracy - countGreat, countMeh + countMiss, accuracyDifficulty * 0.1, amountHitObjectsWithAccuracy * 0.2);
+            skillMeh = inferenceSkillBayesian(amountHitObjectsWithAccuracy - countGreat - countMeh, countMiss, accuracyDifficulty * 0.05, amountHitObjectsWithAccuracy * 0.2);
 
-            double accuracyValue = DifficultyCalculationUtils.Norm(2, skillGreat, skillMeh, skillOk);
+            double accuracyValue = DifficultyCalculationUtils.Norm(2, skillGreat, skillOk, skillMeh);
+
+            double skillOverall = inferenceSkillBayesian(amountHitObjectsWithAccuracy, totalImperfectHits, accuracyDifficulty, amountHitObjectsWithAccuracy);
+            double highAccuracyBuff = 0.9 + 0.2 * skillOverall / skillPerfect;
 
             accuracyValue = Math.Max(0, accuracyValue);
-            accuracyValue = Math.Pow(accuracyValue, 0.5) * 0.41;
+            accuracyValue = Math.Pow(accuracyValue, 0.5) * 0.41 * highAccuracyBuff;
             return accuracyValue;
         }
 
@@ -520,7 +524,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private double inferenceSkillBayesian(double objects, double imperfects, double objectDifficulty, double difficultObjects, double confidence = 0.99)
         {
-            if (objects <= 0) return 0;
+            if (objects <= 0) return 0.0;
 
             double adjustment = 1000;
             if (imperfects > difficultObjects)
@@ -528,7 +532,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double mu = Gamma.InvCDF(imperfects + 0.005 * (objects + adjustment), 1, confidence);
             double k = objectDifficulty / Math.Log(1 + (mu / Math.Pow(objects, 1.2)));
-            double lerp = Math.Max(0, (objects - imperfects) / objects);
+            double lerp = Math.Max(0.0, (objects - imperfects) / objects);
 
             return k * lerp;
         }
