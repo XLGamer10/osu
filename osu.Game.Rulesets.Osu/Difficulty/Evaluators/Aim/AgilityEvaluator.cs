@@ -11,7 +11,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 {
     public static class AgilityEvaluator
     {
-        private const double distance_cap = OsuDifficultyHitObject.NORMALISED_DIAMETER * 1.2; // 1.25 circles distance between centers
+        private const double distance_cap = OsuDifficultyHitObject.NORMALISED_DIAMETER * 1.2; // 1.2 circles distance between centers
         private const double wide_angle_multiplier = 1.10;
 
         /// <summary>
@@ -33,7 +33,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
                 currDeltaTime += osuCurrObj.ExtraDeltaTime;
             }
 
-            double strain = getStrain(osuCurrObj, osuPrevObj, withCheesability);
+            double agilityDifficulty = getAgilityDifficulty(osuCurrObj, osuPrevObj, withCheesability);
 
             if (osuCurrObj.Angle != null && osuPrevObj != null)
             {
@@ -47,15 +47,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
                 double wideAngleBonus = SnapAimEvaluator.CalcAngleWideness(osuCurrObj.Angle.Value);
                 wideAngleBonus *= DifficultyCalculationUtils.ReverseLerp(prevDeltaTime, currDeltaTime * 0.5, currDeltaTime * 0.75);
 
-                double strainPrev = getStrain(osuPrevObj, osuPrevObj1, withCheesability);
-                strain += Math.Min(strain, strainPrev) * wideAngleBonus * wide_angle_multiplier;
+                double agilityDifficultyPrev = getAgilityDifficulty(osuPrevObj, osuPrevObj1, withCheesability);
+                agilityDifficulty += Math.Min(agilityDifficulty, agilityDifficultyPrev) * wideAngleBonus * wide_angle_multiplier;
             }
 
-            strain *= Math.Pow(osuCurrObj.SmallCircleBonus, 1.5);
-            return strain * highBpmBonus(currDeltaTime);
+            agilityDifficulty *= Math.Pow(osuCurrObj.SmallCircleBonus, 1.5);
+            return agilityDifficulty * highBpmBonus(currDeltaTime);
         }
 
-        private static double getStrain(OsuDifficultyHitObject osuCurrObj, OsuDifficultyHitObject? osuPrevObj, bool withCheesability)
+        private static double getAgilityDifficulty(OsuDifficultyHitObject osuCurrObj, OsuDifficultyHitObject? osuPrevObj, bool withCheesability)
         {
             double currDeltaTime = osuCurrObj.AdjustedDeltaTime;
 

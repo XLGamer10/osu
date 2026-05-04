@@ -3,14 +3,15 @@
 
 using System;
 using System.Collections.Generic;
-using osu.Game.Rulesets.Difficulty.Preprocessing;
-using osu.Game.Rulesets.Mods;
-using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
-using osu.Game.Rulesets.Osu.Objects;
 using System.Linq;
+using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Skills;
 using osu.Game.Rulesets.Difficulty.Utils;
+using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed;
+using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
+using osu.Game.Rulesets.Osu.Mods;
+using osu.Game.Rulesets.Osu.Objects;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 {
@@ -57,7 +58,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         {
             currentBurstStrain *= strainDecayBurst(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
             currentFingerControl = FingerControlEvaluator.EvaluateDifficultyOf(current) * fControlMultiplier;
-            currentBurstStrain += SpeedEvaluator.EvaluateDifficultyOf(current) * burstMultiplier;
+            currentBurstStrain += calculateModAdjustedDifficulty(current) * burstMultiplier;
 
             double totalBurstStrain = DifficultyCalculationUtils.Norm(speedFControlNorm, [currentBurstStrain, currentFingerControl]);
 
@@ -89,6 +90,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             return totalValue;
         }
+
+        private double calculateModAdjustedDifficulty(DifficultyHitObject current)
+        {
+            double difficulty = SpeedEvaluator.EvaluateDifficultyOf(current);
+
+            if (Mods.Any(m => m is OsuModAutopilot))
+                difficulty *= 0.5;
+
+            return difficulty;
 
         public double RelevantNoteCount()
         {

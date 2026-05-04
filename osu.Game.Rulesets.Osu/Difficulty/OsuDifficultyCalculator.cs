@@ -92,7 +92,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 ? OsuRatingCalculator.CalculateDifficultyRating(aimNoSlidersDifficultyValue) / OsuRatingCalculator.CalculateDifficultyRating(aimDifficultyValue)
                 : 1;
 
-            var osuRatingCalculator = new OsuRatingCalculator(mods, totalHits, overallDifficulty);
+            var osuRatingCalculator = new OsuRatingCalculator(totalHits, overallDifficulty);
 
             double aimRating = osuRatingCalculator.ComputeAimRating(aimDifficultyValue);
             double aimRatingCheesed = osuRatingCalculator.ComputeAimRating(cheesedAimDifficultyValue);
