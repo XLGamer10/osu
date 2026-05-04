@@ -93,9 +93,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double calculateModAdjustedDifficulty(DifficultyHitObject current)
         {
-            double snapDifficulty = SnapAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierSnap;
-            double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current) * skillMultiplierAgility;
-            double flowDifficulty = FlowAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders) * skillMultiplierFlow;
+            double snapDifficulty = SnapAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders, WithCheesability) * skillMultiplierSnap;
+            double agilityDifficulty = AgilityEvaluator.EvaluateDifficultyOf(current, WithCheesability) * skillMultiplierAgility;
+            double flowDifficulty = FlowAimEvaluator.EvaluateDifficultyOf(current, IncludeSliders, WithCheesability) * skillMultiplierFlow;
 
             double totalDifficulty = calculateTotalValue(snapDifficulty, agilityDifficulty, flowDifficulty);
 

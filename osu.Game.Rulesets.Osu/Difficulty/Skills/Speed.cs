@@ -99,6 +99,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 difficulty *= 0.5;
 
             return difficulty;
+        }
 
         public double RelevantNoteCount()
         {
