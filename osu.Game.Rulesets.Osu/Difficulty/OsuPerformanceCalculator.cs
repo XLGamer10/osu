@@ -544,7 +544,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double z = 2.32634787404;
             double mu = alpha * Math.Pow(1 - 1/(9*alpha) + z * Math.Sqrt(1/(9*alpha)), 3);
 
-            double k = objectDifficulty / Math.Log(1 + (mu / Math.Pow(objects, 1.1)));
+            double k = objectDifficulty / Math.Log(1 + (mu / Math.Pow(objects, 1.2)));
             double lerp = Math.Max(0, (objects - imperfects) / objects);
 
             return k * lerp;
