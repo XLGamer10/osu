@@ -278,17 +278,23 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (amountHitObjectsWithAccuracy == 0)
                 return 0.0;
 
-            double p = (double)(amountHitObjectsWithAccuracy + 1) / (amountHitObjectsWithAccuracy + 2);
+            double accuracyDifficulty = Math.Pow(1.53, overallDifficulty) * 2.83;
+            accuracyDifficulty = Math.Pow(accuracyDifficulty, 1.3);
 
-            double accuracyDifficulty = 16 * Math.Pow(7.5 * Math.Sqrt(2) * DifficultyCalculationUtils.ErfInv(2 * p - 1) / greatHitWindow, 1.7);
+            double skillPerfect = inferenceSkillBayesian(amountHitObjectsWithAccuracy, 0, accuracyDifficulty, amountHitObjectsWithAccuracy * 0.2);
+            double skillGreat = inferenceSkillBayesian(amountHitObjectsWithAccuracy, countOk + countMeh + countMiss, accuracyDifficulty, amountHitObjectsWithAccuracy * 0.1);
+            double skillOk = inferenceSkillBayesian(amountHitObjectsWithAccuracy - countGreat, countMeh + countMiss, accuracyDifficulty * 0.1, amountHitObjectsWithAccuracy * 0.1);
+            double skillMeh = inferenceSkillBayesian(amountHitObjectsWithAccuracy - countGreat - countMeh, countMiss, accuracyDifficulty * 0.05, amountHitObjectsWithAccuracy * 0.1);
 
-            double skillPerfect = inferenceSkillBayesian(amountHitObjectsWithAccuracy, 0, 1, amountHitObjectsWithAccuracy);
-            double skillGreat = inferenceSkillBayesian(amountHitObjectsWithAccuracy, countOk + countMeh + countMiss, 1, amountHitObjectsWithAccuracy);
-
-            double accuracyValue = Math.Pow(Math.Max(0, skillGreat), 0.3) * accuracyDifficulty;
+            double accuracyValue = DifficultyCalculationUtils.Norm(2, skillGreat, skillMeh, skillOk);
             double accuracyHitObjectsWithAccuracy = Math.Max((amountHitObjectsWithAccuracy - 2.0 * countOk/3.0 - 5.0 * countMeh/6.0 - countMiss)/amountHitObjectsWithAccuracy, 0);
+
+            double skillOverall = inferenceSkillBayesian(amountHitObjectsWithAccuracy, totalImperfectHits, accuracyDifficulty, amountHitObjectsWithAccuracy);
+            double highAccuracyBuff = 0.9 + 0.2 * skillOverall / skillPerfect;
             double lengthAdjust = Math.Max(5 / Math.Log(amountHitObjectsWithAccuracy), 1);
-            accuracyValue *= lengthAdjust * Math.Pow(accuracyHitObjectsWithAccuracy, 3) * Math.Max(0.9, Math.Pow(accuracyHitObjectsWithAccuracy, 100));
+
+            accuracyValue = Math.Max(0, accuracyValue);
+            accuracyValue = Math.Pow(accuracyValue, 0.5) * 0.41 * highAccuracyBuff * accuracyHitObjectsWithAccuracy;
 
             // Increasing the accuracy value by object count for Blinds isn't ideal, so the minimum buff is given.
             if (score.Mods.Any(m => m is OsuModBlinds))
@@ -531,16 +537,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (objects <= 0) return 0.0;
 
             if (imperfects > difficultObjects)
-                imperfects = difficultObjects + Math.Pow(imperfects - difficultObjects, 1.6);
+                imperfects = difficultObjects + Math.Pow(imperfects - difficultObjects, imperfects / difficultObjects);
 
             double alpha = imperfects + 0.005 * objects + 5;
 
-            double z = -2.32634787404;
+            double z = 2.32634787404;
             double mu = alpha * Math.Pow(1 - 1/(9*alpha) + z * Math.Sqrt(1/(9*alpha)), 3);
 
             double k = objectDifficulty / Math.Log(1 + (mu / Math.Pow(objects, 1.2)));
+            double lerp = Math.Max(0, (objects - imperfects) / objects);
 
-            return k;
+            return k * lerp;
         }
 
         // Miss penalty assumes that a player will miss on the hardest parts of a map,
