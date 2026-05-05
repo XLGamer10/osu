@@ -278,7 +278,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (amountHitObjectsWithAccuracy == 0)
                 return 0.0;
 
-            double accuracyDifficulty = Math.Pow(1.53, overallDifficulty) * 2.83;
+            double accuracyDifficulty = Math.Pow(1.57905, overallDifficulty) * 2;
             accuracyDifficulty = Math.Pow(accuracyDifficulty, 1.3);
 
             double skillPerfect = inferenceSkillBayesian(amountHitObjectsWithAccuracy, 0, accuracyDifficulty, amountHitObjectsWithAccuracy * 0.2);
@@ -291,10 +291,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double skillOverall = inferenceSkillBayesian(amountHitObjectsWithAccuracy, totalImperfectHits, accuracyDifficulty, amountHitObjectsWithAccuracy);
             double highAccuracyBuff = 0.9 + 0.3 * Math.Pow(skillOverall / skillPerfect, 2);
-            double lengthAdjust = Math.Max(6 / Math.Log(amountHitObjectsWithAccuracy), 1);
 
             accuracyValue = Math.Max(0, accuracyValue);
-            accuracyValue = Math.Pow(accuracyValue, 0.5) * 0.41 * highAccuracyBuff * accuracyHitObjectsWithAccuracy;
+            accuracyValue = Math.Pow(accuracyValue, 0.5) * 0.41 * highAccuracyBuff * Math.Pow(accuracyHitObjectsWithAccuracy, 1.5);
 
             // Increasing the accuracy value by object count for Blinds isn't ideal, so the minimum buff is given.
             if (score.Mods.Any(m => m is OsuModBlinds))
@@ -536,16 +535,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         {
             if (objects <= 0) return 0.0;
 
+            double lerp = Math.Max(0, (objects - imperfects) / objects);
             if (imperfects > difficultObjects)
-                imperfects = difficultObjects + Math.Pow(imperfects - difficultObjects, imperfects / difficultObjects);
+                imperfects = difficultObjects + (imperfects - difficultObjects) * Math.Exp(imperfects / difficultObjects);
 
             double alpha = imperfects + 0.005 * objects + 5;
 
             double z = 2.32634787404;
             double mu = alpha * Math.Pow(1 - 1/(9*alpha) + z * Math.Sqrt(1/(9*alpha)), 3);
 
-            double k = objectDifficulty / Math.Log(1 + (mu / Math.Pow(objects, 1.2)));
-            double lerp = Math.Max(0, (objects - imperfects) / objects);
+            double k = objectDifficulty / Math.Log(1 + (mu / Math.Pow(objects, 1.15)));
+
 
             return k * lerp;
         }
