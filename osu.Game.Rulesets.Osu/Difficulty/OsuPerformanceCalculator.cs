@@ -290,8 +290,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double accuracyHitObjectsWithAccuracy = Math.Max((amountHitObjectsWithAccuracy - 2.0 * countOk/3.0 - 5.0 * countMeh/6.0 - countMiss)/amountHitObjectsWithAccuracy, 0);
 
             double skillOverall = inferenceSkillBayesian(amountHitObjectsWithAccuracy, totalImperfectHits, accuracyDifficulty, amountHitObjectsWithAccuracy);
-            double highAccuracyBuff = 0.9 + 0.2 * skillOverall / skillPerfect;
-            double lengthAdjust = Math.Max(5 / Math.Log(amountHitObjectsWithAccuracy), 1);
+            double highAccuracyBuff = 0.9 + 0.3 * Math.Pow(skillOverall / skillPerfect, 2);
+            double lengthAdjust = Math.Max(6 / Math.Log(amountHitObjectsWithAccuracy), 1);
 
             accuracyValue = Math.Max(0, accuracyValue);
             accuracyValue = Math.Pow(accuracyValue, 0.5) * 0.41 * highAccuracyBuff * accuracyHitObjectsWithAccuracy;
@@ -544,7 +544,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double z = 2.32634787404;
             double mu = alpha * Math.Pow(1 - 1/(9*alpha) + z * Math.Sqrt(1/(9*alpha)), 3);
 
-            double k = objectDifficulty / Math.Log(1 + (mu / Math.Pow(objects, 1.2)));
+            double k = objectDifficulty / Math.Log(1 + (mu / Math.Pow(objects, 1.1)));
             double lerp = Math.Max(0, (objects - imperfects) / objects);
 
             return k * lerp;
