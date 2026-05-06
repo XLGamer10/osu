@@ -29,7 +29,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
         /// <item><description>and slider difficulty.</description></item>
         /// </list>
         /// </summary>
-        public static double EvaluateDifficultyOf(DifficultyHitObject current, bool withSliderTravelDistance)
+        public static double EvaluateDifficultyOf(DifficultyHitObject current, bool withSliderTravelDistance, bool withCheesability)
         {
             if (current.BaseObject is Spinner || current.Index <= 1 || current.Previous(0).BaseObject is Spinner)
                 return 0;
@@ -38,6 +38,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             var osuLastObj = (OsuDifficultyHitObject)current.Previous(0);
             var osuLast2Obj = (OsuDifficultyHitObject)current.Previous(2);
 
+            double currDeltaTime = osuCurrObj.AdjustedDeltaTime;
+            double lastDeltaTime = osuLastObj.AdjustedDeltaTime;
+
+            if (withCheesability)
+            {
+                currDeltaTime += osuCurrObj.ExtraDeltaTime;
+                lastDeltaTime += osuLastObj.ExtraDeltaTime;
+            }
+
             const int radius = OsuDifficultyHitObject.NORMALISED_RADIUS;
             const int diameter = OsuDifficultyHitObject.NORMALISED_DIAMETER;
 
@@ -45,8 +54,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             double currDistance = osuCurrObj.GetDistance(withSliderTravelDistance);
             double prevDistance = osuLastObj.GetDistance(withSliderTravelDistance);
 
-            double currVelocity = currDistance / osuCurrObj.AdjustedDeltaTime;
-            double prevVelocity = prevDistance / osuLastObj.AdjustedDeltaTime;
+            double currVelocity = currDistance / currDeltaTime;
+            double prevVelocity = prevDistance / lastDeltaTime;
 
             double snapDifficulty = currVelocity; // Start difficulty with regular velocity.
 
@@ -63,7 +72,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
                 double acuteAngleBonus = 0;
 
-                if (Math.Max(osuCurrObj.AdjustedDeltaTime, osuLastObj.AdjustedDeltaTime) < 1.25 * Math.Min(osuCurrObj.AdjustedDeltaTime, osuLastObj.AdjustedDeltaTime)) // If rhythms are the same.
+                if (Math.Max(currDeltaTime, lastDeltaTime) < 1.25 * Math.Min(currDeltaTime, lastDeltaTime)) // If rhythms are the same.
                 {
                     acuteAngleBonus = CalcAngleAcuteness(currAngle);
 
@@ -71,7 +80,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
                     acuteAngleBonus *= 0.08 + 0.86 * (1 - Math.Min(acuteAngleBonus, Math.Pow(CalcAngleAcuteness(lastAngle), 3)));
 
                     // Apply acute angle bonus for BPM above 300 1/2 and distance more than one diameter
-                    acuteAngleBonus *= velocityInfluence * DifficultyCalculationUtils.Smootherstep(DifficultyCalculationUtils.MillisecondsToBPM(osuCurrObj.AdjustedDeltaTime, 2), 300, 400) *
+                    acuteAngleBonus *= velocityInfluence * DifficultyCalculationUtils.Smootherstep(DifficultyCalculationUtils.MillisecondsToBPM(currDeltaTime, 2), 300, 400) *
                                        DifficultyCalculationUtils.Smootherstep(currDistance, 0, diameter * 2);
                 }
 
@@ -119,12 +128,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
                 double distRatio = DifficultyCalculationUtils.Smoothstep(Math.Abs(prevVelocity - currVelocity) / Math.Max(prevVelocity, currVelocity), 0, 1);
 
                 // Reward for % distance up to 125 / strainTime for overlaps where velocity is still changing.
-                double overlapVelocityBuff = Math.Min(diameter * 1.25 / Math.Min(osuCurrObj.AdjustedDeltaTime, osuLastObj.AdjustedDeltaTime), Math.Abs(prevVelocity - currVelocity));
+                double overlapVelocityBuff = Math.Min(diameter * 1.25 / Math.Min(currDeltaTime, lastDeltaTime), Math.Abs(prevVelocity - currVelocity));
 
                 double velocityChangeBonus = overlapVelocityBuff * distRatio;
 
                 // Penalize for rhythm changes.
-                velocityChangeBonus *= Math.Pow(Math.Min(osuCurrObj.AdjustedDeltaTime, osuLastObj.AdjustedDeltaTime) / Math.Max(osuCurrObj.AdjustedDeltaTime, osuLastObj.AdjustedDeltaTime), 2);
+                velocityChangeBonus *= Math.Pow(Math.Min(currDeltaTime, lastDeltaTime) / Math.Max(currDeltaTime, lastDeltaTime), 2);
 
                 snapDifficulty += velocityChangeBonus * velocity_change_multiplier;
             }

@@ -17,7 +17,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
         /// <summary>
         /// Evaluates the difficulty of fast aiming
         /// </summary>
-        public static double EvaluateDifficultyOf(DifficultyHitObject current)
+        public static double EvaluateDifficultyOf(DifficultyHitObject current, bool withCheesability)
         {
             if (current.BaseObject is Spinner)
                 return 0;
@@ -26,27 +26,48 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             var osuPrevObj = current.Index > 0 ? (OsuDifficultyHitObject)current.Previous(0) : null;
             var osuPrevObj1 = current.Index > 1 ? (OsuDifficultyHitObject)current.Previous(1) : null;
 
-            double agilityDifficulty = getAgilityDifficulty(osuCurrObj);
+            double currDeltaTime = osuCurrObj.AdjustedDeltaTime;
+
+            if (withCheesability)
+            {
+                currDeltaTime += osuCurrObj.ExtraDeltaTime;
+            }
+
+            double agilityDifficulty = getAgilityDifficulty(osuCurrObj, osuPrevObj, withCheesability);
 
             if (osuCurrObj.Angle != null && osuPrevObj != null)
             {
-                double wideAngleBonus = SnapAimEvaluator.CalcAngleWideness(osuCurrObj.Angle.Value);
-                wideAngleBonus *= DifficultyCalculationUtils.ReverseLerp(osuPrevObj.AdjustedDeltaTime, osuCurrObj.AdjustedDeltaTime * 0.5, osuCurrObj.AdjustedDeltaTime * 0.75);
+                double prevDeltaTime = osuCurrObj.AdjustedDeltaTime;
 
-                double agilityDifficultyPrev = getAgilityDifficulty(osuPrevObj);
+                if (withCheesability)
+                {
+                    prevDeltaTime += osuCurrObj.ExtraDeltaTime;
+                }
+
+                double wideAngleBonus = SnapAimEvaluator.CalcAngleWideness(osuCurrObj.Angle.Value);
+                wideAngleBonus *= DifficultyCalculationUtils.ReverseLerp(prevDeltaTime, currDeltaTime * 0.5, currDeltaTime * 0.75);
+
+                double agilityDifficultyPrev = getAgilityDifficulty(osuPrevObj, osuPrevObj1, withCheesability);
                 agilityDifficulty += Math.Min(agilityDifficulty, agilityDifficultyPrev) * wideAngleBonus * wide_angle_multiplier;
             }
 
             agilityDifficulty *= Math.Pow(osuCurrObj.SmallCircleBonus, 1.5);
-            return agilityDifficulty * highBpmBonus(osuCurrObj.AdjustedDeltaTime);
+            return agilityDifficulty * highBpmBonus(currDeltaTime);
         }
 
-        private static double getAgilityDifficulty(OsuDifficultyHitObject osuCurrObj)
+        private static double getAgilityDifficulty(OsuDifficultyHitObject osuCurrObj, OsuDifficultyHitObject? osuPrevObj, bool withCheesability)
         {
+            double currDeltaTime = osuCurrObj.AdjustedDeltaTime;
+
+            if (withCheesability)
+            {
+                currDeltaTime += osuCurrObj.ExtraDeltaTime;
+            }
+
             double distance = osuCurrObj.GetDistance(true);
 
             double distanceScaled = Math.Min(distance, distance_cap) / distance_cap;
-            return distanceScaled * 1000 / osuCurrObj.AdjustedDeltaTime;
+            return distanceScaled * 1000 / currDeltaTime;
         }
 
         private static double highBpmBonus(double ms) => 1 / (1 - Math.Pow(0.2, ms / 1000));

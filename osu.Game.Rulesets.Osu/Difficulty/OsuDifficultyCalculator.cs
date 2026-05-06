@@ -51,14 +51,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (beatmap.HitObjects.Count == 0)
                 return new OsuDifficultyAttributes { Mods = mods };
 
-            var aim = skills.OfType<Aim>().Single(a => a.IncludeSliders);
-            var aimWithoutSliders = skills.OfType<Aim>().Single(a => !a.IncludeSliders);
+            var aim = skills.OfType<Aim>().Single(a => a.IncludeSliders && !a.WithCheesability);
+            var aimWithoutSliders = skills.OfType<Aim>().Single(a => !a.IncludeSliders && !a.WithCheesability);
+            var aimCheesed = skills.OfType<Aim>().Single(a => a.IncludeSliders && a.WithCheesability);
             var speed = skills.OfType<Speed>().Single(s => !s.WithoutStamina);
             var flashlight = skills.OfType<Flashlight>().SingleOrDefault();
             var reading = skills.OfType<Reading>().Single();
 
             double aimDifficultyValue = aim.DifficultyValue();
             double aimNoSlidersDifficultyValue = aimWithoutSliders.DifficultyValue();
+            double cheesedAimDifficultyValue = aimCheesed.DifficultyValue();
             double speedDifficultyValue = speed.DifficultyValue();
             double readingDifficultyValue = reading.DifficultyValue();
 
@@ -93,8 +95,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             var osuRatingCalculator = new OsuRatingCalculator(totalHits, overallDifficulty);
 
             double aimRating = osuRatingCalculator.ComputeAimRating(aimDifficultyValue);
+            double aimRatingCheesed = osuRatingCalculator.ComputeAimRating(cheesedAimDifficultyValue);
             double speedRating = osuRatingCalculator.ComputeSpeedRating(speedDifficultyValue);
             double readingRating = osuRatingCalculator.ComputeReadingRating(readingDifficultyValue);
+
+            double cheeseFactor = aimRating > 0 ? aimRatingCheesed / aimRating : 1;
+
+            double greatsWithCheesing = aim.GetInaccuraciesWithCheesing();
 
             double flashlightRating = 0.0;
 
@@ -128,6 +135,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 FlashlightDifficulty = flashlightRating,
                 ReadingDifficulty = readingRating,
                 SliderFactor = sliderFactor,
+                CheeseFactor = cheeseFactor,
+                InaccuraciesWithCheesing = greatsWithCheesing,
                 AimMissPenaltyCoefficientA = aimMissPenaltyCoefficients.ElementAtOrDefault(0),
                 AimMissPenaltyCoefficientB = aimMissPenaltyCoefficients.ElementAtOrDefault(1),
                 AimMissPenaltyCoefficientC = aimMissPenaltyCoefficients.ElementAtOrDefault(2),
@@ -184,10 +193,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         {
             var skills = new List<Skill>
             {
-                new Aim(mods, true),
-                new Aim(mods, false),
+                new Aim(mods, true, false),
+                new Aim(mods, false, false),
                 new Speed(mods, false),
                 new Speed(mods, true),
+                new Aim(mods, true, true),
                 new Reading(mods),
             };
 
