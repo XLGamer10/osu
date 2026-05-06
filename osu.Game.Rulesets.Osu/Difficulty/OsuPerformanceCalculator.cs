@@ -15,7 +15,6 @@ using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Scoring;
 using osu.Game.Utils;
-using System.Numerics;
 
 namespace osu.Game.Rulesets.Osu.Difficulty
 {
@@ -268,7 +267,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private double computeAccuracyValue(ScoreInfo score, OsuDifficultyAttributes attributes)
         {
-
             if (score.Mods.Any(h => h is OsuModRelax))
                 return 0.0;
 
@@ -287,16 +285,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double skillMeh = inferenceSkillBayesian(amountHitObjectsWithAccuracy - countGreat - countMeh, countMiss, accuracyDifficulty * 0.05, amountHitObjectsWithAccuracy * 0.1);
 
             double accuracyValue = DifficultyCalculationUtils.Norm(2, skillGreat, skillMeh, skillOk);
-            double accuracyHitObjectsWithAccuracy = Math.Max((amountHitObjectsWithAccuracy - 2.0 * countOk/3.0 - 5.0 * countMeh/6.0 - countMiss)/amountHitObjectsWithAccuracy, 0);
+            double accuracyHitObjectsWithAccuracy = Math.Max((amountHitObjectsWithAccuracy - 2.0 * countOk / 3.0 - 5.0 * countMeh / 6.0 - countMiss) / amountHitObjectsWithAccuracy, 0);
 
             double skillOverall = inferenceSkillBayesian(amountHitObjectsWithAccuracy, totalImperfectHits, accuracyDifficulty, amountHitObjectsWithAccuracy);
             double highAccuracyBuff = 0.9 + 0.3 * Math.Pow(skillOverall / skillPerfect, 2);
 
             accuracyValue = Math.Max(0, accuracyValue);
-            accuracyValue = Math.Pow(accuracyValue, 0.5) * 0.41 * highAccuracyBuff * Math.Pow(accuracyHitObjectsWithAccuracy, 1.5);
+            accuracyValue = Math.Pow(accuracyValue, 0.5) * 0.54 * highAccuracyBuff * Math.Pow(accuracyHitObjectsWithAccuracy, 1.5);
 
             if (amountHitObjectsWithAccuracy > 2000)
-                accuracyValue *= Math.Pow(amountHitObjectsWithAccuracy / 2000, 0.075);
+                accuracyValue *= Math.Pow(2000.0 / amountHitObjectsWithAccuracy, 0.075);
 
             // Increasing the accuracy value by object count for Blinds isn't ideal, so the minimum buff is given.
             if (score.Mods.Any(m => m is OsuModBlinds))
@@ -544,11 +542,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double alpha = imperfects + 0.005 * objects + 5;
 
-            double z = 2.32634787404;
-            double mu = alpha * Math.Pow(1 - 1/(9*alpha) + z * Math.Sqrt(1/(9*alpha)), 3);
+            const double z = 2.32634787404;
+            double mu = alpha * Math.Pow(1 - 1 / (9 * alpha) + z * Math.Sqrt(1 / (9 * alpha)), 3);
 
-            double k = objectDifficulty / Math.Log(1 + (mu / Math.Pow(objects, 1.15)));
-
+            double k = objectDifficulty / Math.Log(1 + mu / Math.Pow(objects, 1.075));
 
             return k * lerp;
         }
