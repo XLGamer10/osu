@@ -31,9 +31,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
             var currObj = (OsuDifficultyHitObject)current;
             var nextObj = (OsuDifficultyHitObject)current.Next(0);
 
-            double currDeltaTime = currObj.AdjustedDeltaTime;
-
-            double velocity = Math.Max(1, currObj.LazyJumpDistance / currDeltaTime); // Only allow velocity to buff
+            double velocity = Math.Max(1, currObj.LazyJumpDistance / currObj.AdjustedDeltaTime); // Only allow velocity to buff
 
             double currentVisibleObjectDensity = retrieveCurrentVisibleObjectDensity(currObj);
             double pastObjectDifficultyInfluence = getPastObjectDifficultyInfluence(currObj);
@@ -122,8 +120,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         private static double calculateHiddenDifficulty(OsuDifficultyHitObject currObj, double pastObjectDifficultyInfluence, double currentVisibleObjectDensity, double velocity,
                                                         double constantAngleNerfFactor)
         {
-            double currDeltaTime = currObj.AdjustedDeltaTime;
-
             // Higher preempt means that time spent invisible is higher too, we want to reward that
             double preemptFactor = Math.Pow(currObj.Preempt, 2.2) * 0.01;
 
@@ -139,7 +135,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
 
             // Buff perfect stacks only if current note is completely invisible at the time you click the previous note.
             if (currObj.LazyJumpDistance == 0 && currObj.OpacityAt(previousObj.BaseObject.StartTime, true) == 0 && previousObj.StartTime > currObj.StartTime - currObj.Preempt)
-                hiddenDifficulty += hidden_multiplier * 2500 / Math.Pow(currDeltaTime, 1.5); // Perfect stacks are harder the less time between notes
+                hiddenDifficulty += hidden_multiplier * 2500 / Math.Pow(currObj.AdjustedDeltaTime, 1.5); // Perfect stacks are harder the less time between notes
 
             return hiddenDifficulty;
         }
@@ -226,10 +222,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                 if (loopObj.IsNull())
                     break;
 
-                double loopDeltaTime = loopObj.AdjustedDeltaTime;
-
                 // Account less for objects that are close to the time limit.
-                double longIntervalFactor = 1 - DifficultyCalculationUtils.ReverseLerp(loopDeltaTime, maximum_angle_relevancy_time, minimum_angle_relevancy_time);
+                double longIntervalFactor = 1 - DifficultyCalculationUtils.ReverseLerp(loopObj.AdjustedDeltaTime, maximum_angle_relevancy_time, minimum_angle_relevancy_time);
 
                 if (loopObj.Angle.IsNotNull() && current.Angle.IsNotNull())
                 {
