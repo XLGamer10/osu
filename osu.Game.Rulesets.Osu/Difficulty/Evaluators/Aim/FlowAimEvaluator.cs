@@ -17,7 +17,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
         /// <summary>
         /// Evaluates difficulty of "flow aim" - aiming pattern where player doesn't stop their cursor on every object and instead "flows" through them.
         /// </summary>
-        public static double EvaluateDifficultyOf(DifficultyHitObject current, bool withSliderTravelDistance, bool withCheesability)
+        public static double EvaluateDifficultyOf(DifficultyHitObject current, bool withSliderTravelDistance)
         {
             if (current.BaseObject is Spinner || current.Index <= 1 || current.Previous(0).BaseObject is Spinner)
                 return 0;
@@ -32,20 +32,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
             var osuCurrObj = (OsuDifficultyHitObject)current;
             var osuLastObj = (OsuDifficultyHitObject)current.Previous(0);
 
-            double currDeltaTime = osuCurrObj.AdjustedDeltaTime;
-            double nextDeltaTime = osuNextObj.AdjustedDeltaTime;
-
-            if (withCheesability)
-            {
-                currDeltaTime += osuCurrObj.ExtraDeltaTime;
-                nextDeltaTime += osuNextObj.ExtraDeltaTime;
-            }
-
             double currDistance = osuCurrObj.GetDistance(withSliderTravelDistance);
             double nextDistance = osuNextObj.GetDistance(withSliderTravelDistance);
 
-            double currVelocity = currDistance / currDeltaTime;
-            double nextVelocity = nextDistance / nextDeltaTime;
+            double currVelocity = currDistance / osuCurrObj.AdjustedDeltaTime;
+            double nextVelocity = nextDistance / osuNextObj.AdjustedDeltaTime;
 
             double flowDifficulty = currVelocity;
 
@@ -55,13 +46,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
 
             // Rhythm changes are harder to flow
             flowDifficulty *= 1 + Math.Min(0.25,
-                Math.Pow((Math.Max(currDeltaTime, nextDeltaTime) - Math.Min(currDeltaTime, nextDeltaTime)) / 50, 4));
+                Math.Pow((Math.Max(osuCurrObj.AdjustedDeltaTime, osuNextObj.AdjustedDeltaTime) - Math.Min(osuCurrObj.AdjustedDeltaTime, osuNextObj.AdjustedDeltaTime)) / 50, 4));
 
             if (osuCurrObj.Angle != null && osuNextObj.Angle != null)
             {
                 double angleDifference = Math.Abs(osuCurrObj.Angle.Value - osuNextObj.Angle.Value);
                 double angleDifferenceAdjusted = Math.Sin(angleDifference / 2) * 180.0;
-                double angularVelocity = angleDifferenceAdjusted / (currDeltaTime * 0.1);
+                double angularVelocity = angleDifferenceAdjusted / (osuCurrObj.AdjustedDeltaTime * 0.1);
 
                 // Low angular velocity flow (angles are consistent) is easier to follow than erratic flow
                 flowDifficulty *= 0.8 + Math.Sqrt(angularVelocity / 270.0);
@@ -88,7 +79,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim
                 double distRatio = DifficultyCalculationUtils.Smoothstep(Math.Abs(nextVelocity - currVelocity) / Math.Max(nextVelocity, currVelocity), 0, 1);
 
                 // Reward for % distance up to 125 / strainTime for overlaps where velocity is still changing.
-                double overlapVelocityBuff = Math.Min(OsuDifficultyHitObject.NORMALISED_DIAMETER * 1.25 / Math.Min(currDeltaTime, nextDeltaTime),
+                double overlapVelocityBuff = Math.Min(OsuDifficultyHitObject.NORMALISED_DIAMETER * 1.25 / Math.Min(osuCurrObj.AdjustedDeltaTime, osuNextObj.AdjustedDeltaTime),
                     Math.Abs(nextVelocity - currVelocity));
 
                 flowDifficulty += overlapVelocityBuff *

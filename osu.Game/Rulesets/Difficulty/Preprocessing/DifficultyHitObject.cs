@@ -97,11 +97,11 @@ namespace osu.Game.Rulesets.Difficulty.Preprocessing
                     if (nestedHitObject.HitWindows == HitWindows.Empty)
                         continue;
 
-                    return nestedHitObject.HitWindows.WindowFor(hitResult) / ClockRate;
+                    return 2 * nestedHitObject.HitWindows.WindowFor(hitResult) / ClockRate;
                 }
             }
 
-            return BaseObject.HitWindows.WindowFor(hitResult) / ClockRate;
+            return 2 * BaseObject.HitWindows.WindowFor(hitResult) / ClockRate;
         }
     }
 }
