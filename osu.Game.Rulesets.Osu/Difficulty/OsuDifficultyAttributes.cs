@@ -68,9 +68,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         public double AimTopWeightedSliderFactor { get; set; }
 
         /// <summary>
-        /// Describes how much of <see cref="SpeedDifficultStrainCount"/> is contributed to by hitcircles or sliders
-        /// A value closer to 0.0 indicates most of <see cref="SpeedDifficultStrainCount"/> is contributed by hitcircles
-        /// A value closer to Infinity indicates most of <see cref="SpeedDifficultStrainCount"/> is contributed by sliders
+        /// Describes how much of the highest speed difficulties are hitcircles or sliders
+        /// A value closer to 0.0 indicates most of the highest speed difficulties are hitcircles
+        /// A value closer to Infinity indicates most of the highest speed difficulties are sliders
         /// </summary>
         [JsonProperty("speed_top_weighted_slider_factor")]
         public double SpeedTopWeightedSliderFactor { get; set; }
@@ -83,6 +83,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         [JsonProperty("aim_penalty_coefficient_c")]
         public double AimMissPenaltyCoefficientC { get; set; }
+
+        [JsonProperty("speed_penalty_coefficient_a")]
+        public double SpeedMissPenaltyCoefficientA { get; set; }
+
+        [JsonProperty("speed_penalty_coefficient_b")]
+        public double SpeedMissPenaltyCoefficientB { get; set; }
+
+        [JsonProperty("speed_penalty_coefficient_c")]
+        public double SpeedMissPenaltyCoefficientC { get; set; }
 
         [JsonProperty("speed_difficult_strain_count")]
         public double SpeedDifficultStrainCount { get; set; }

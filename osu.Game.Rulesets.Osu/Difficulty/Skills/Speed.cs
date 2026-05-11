@@ -18,9 +18,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// <summary>
     /// Represents the skill required to press keys with regards to keeping up with the speed at which objects need to be hit.
     /// </summary>
-    public class Speed : HarmonicSkill
+    public class Speed : TimeSkill
     {
-        private double skillMultiplier => 1.16;
+        private double skillMultiplier => 7.16;
 
         private readonly List<double> sliderStrains = new List<double>();
 
@@ -28,17 +28,22 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double strainDecayBase => 0.3;
 
-        protected override double HarmonicScale => 20;
-        protected override double DecayExponent => 0.9;
-
         public Speed(Mod[] mods)
             : base(mods)
         {
         }
 
+        protected override double HitProbability(double skill, double difficulty)
+        {
+            if (difficulty <= 0) return 1;
+            if (skill <= 0) return 0;
+
+            return DifficultyCalculationUtils.Erf(skill / (Math.Sqrt(2) * difficulty));
+        }
+
         private double strainDecay(double ms) => Math.Pow(strainDecayBase, ms / 1000);
 
-        protected override double ObjectDifficultyOf(DifficultyHitObject current)
+        protected override double StrainValueAt(DifficultyHitObject current)
         {
             if (Mods.Any(m => m is OsuModRelax))
                 return 0;
@@ -86,10 +91,21 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (sliderStrains.Count == 0)
                 return 0;
 
-            if (NoteWeightSum == 0)
-                return 0.0;
+            double consistentTopNote = difficultyValue / 0.1; // What would the top note be if all note values were identical
 
-            double consistentTopNote = difficultyValue / NoteWeightSum; // What would the top note be if all note values were identical
+            if (consistentTopNote == 0)
+                return 0;
+
+            // Use a weighted sum of all notes. Constants are arbitrary and give nice values
+            return sliderStrains.Sum(s => DifficultyCalculationUtils.Logistic(s / consistentTopNote, 0.88, 10, 1.1));
+        }
+
+        public double CountTopWeightedObjectDifficulties(double difficultyValue)
+        {
+            if (sliderStrains.Count == 0)
+                return 0;
+
+            double consistentTopNote = difficultyValue / 0.1; // What would the top note be if all note values were identical
 
             if (consistentTopNote == 0)
                 return 0;

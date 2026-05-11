@@ -63,7 +63,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double readingDifficultyValue = reading.DifficultyValue();
 
             double[] aimMissPenaltyCoefficients = aim.GetMissPenaltyCoefficients();
-            double speedDifficultStrainCount = speed.CountTopWeightedObjectDifficulties(speedDifficultyValue);
+            double[] speedMissPenaltyCoefficients = speed.GetMissPenaltyCoefficients();
+            double speedDifficultStrainCount = speed.CountTopWeightedStrains(speedDifficultyValue);
             double readingDifficultNoteCount = reading.CountTopWeightedObjectDifficulties(readingDifficultyValue);
 
             double speedNotes = speed.RelevantNoteCount();
@@ -108,7 +109,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             var scoreAttributes = simulator.Simulate(WorkingBeatmap, beatmap);
 
             double baseAimPerformance = TimeSkill.DifficultyToPerformance(aimRating);
-            double baseSpeedPerformance = HarmonicSkill.DifficultyToPerformance(speedRating);
+            double baseSpeedPerformance = TimeSkill.DifficultyToPerformance(speedRating);
             double baseReadingPerformance = HarmonicSkill.DifficultyToPerformance(readingRating);
             double baseFlashlightPerformance = Flashlight.DifficultyToPerformance(flashlightRating);
             double baseCognitionPerformance = SumCognitionDifficulty(baseReadingPerformance, baseFlashlightPerformance);
@@ -131,7 +132,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 AimMissPenaltyCoefficientA = aimMissPenaltyCoefficients.ElementAtOrDefault(0),
                 AimMissPenaltyCoefficientB = aimMissPenaltyCoefficients.ElementAtOrDefault(1),
                 AimMissPenaltyCoefficientC = aimMissPenaltyCoefficients.ElementAtOrDefault(2),
-                SpeedDifficultStrainCount = speedDifficultStrainCount,
+                SpeedMissPenaltyCoefficientA = aimMissPenaltyCoefficients.ElementAtOrDefault(0),
+                SpeedMissPenaltyCoefficientB = aimMissPenaltyCoefficients.ElementAtOrDefault(1),
+                SpeedMissPenaltyCoefficientC = aimMissPenaltyCoefficients.ElementAtOrDefault(2),
                 ReadingDifficultNoteCount = readingDifficultNoteCount,
                 AimTopWeightedSliderFactor = aimTopWeightedSliderFactor,
                 SpeedTopWeightedSliderFactor = speedTopWeightedSliderFactor,

@@ -32,7 +32,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double skillMultiplierSnap => 355.0;
         private double skillMultiplierAgility => 10.0;
-        private double skillMultiplierFlow => 1097;
+        private double skillMultiplierFlow => 1230;
         private double skillMultiplierTotal => 1.08;
         private double combinedSnapNormExponent => 1.2;
 
@@ -149,7 +149,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (sliderStrains.Count == 0)
                 return 0;
 
-            double consistentTopStrain = difficultyValue * (1 - 0.9); // What would the top strain be if all strain values were identical
+            double consistentTopStrain = difficultyValue * 0.1; // What would the top strain be if all strain values were identical
 
             if (consistentTopStrain == 0)
                 return 0;

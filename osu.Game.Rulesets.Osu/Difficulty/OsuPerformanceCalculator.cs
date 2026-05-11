@@ -248,7 +248,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             {
                 double relevantMissCount = Math.Min(effectiveMissCount + speedEstimatedSliderBreaks, totalImperfectHits + countSliderTickMiss);
 
-                speedValue *= calculateStrainCountMissPenalty(relevantMissCount, attributes.SpeedDifficultStrainCount);
+                double[] coefficients =
+                [
+                    attributes.SpeedMissPenaltyCoefficientA,
+                    attributes.SpeedMissPenaltyCoefficientB,
+                    attributes.SpeedMissPenaltyCoefficientC,
+                    // We can derive the 4th coefficient from the first third, since at x = 1 our polynomial is equal to the sum of the coefficients,
+                    // and the relevant miss count there is log(totalHits - 1) since our polynomial uses log miss counts.
+                    Math.Log(totalHits + 1) - attributes.SpeedMissPenaltyCoefficientA - attributes.SpeedMissPenaltyCoefficientB - attributes.SpeedMissPenaltyCoefficientC
+                ];
+
+                speedValue *= calculatePolynomialMissPenalty(relevantMissCount, coefficients);
             }
 
             if (score.Mods.Any(m => m is OsuModBlinds))
