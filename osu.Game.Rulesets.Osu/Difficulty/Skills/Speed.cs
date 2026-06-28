@@ -20,13 +20,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// </summary>
     public class Speed : HarmonicSkill
     {
-        private double skillMultiplier => 1.17;
-
         private readonly List<double> sliderStrains = new List<double>();
 
         private double currentStrain;
 
-        private double strainDecayBase => 0.3;
+        private const double skill_multiplier = 1.17;
+        private const double strain_decay_base = 0.3;
 
         protected override double HarmonicScale => 20;
         protected override double DecayExponent => 0.9;
@@ -36,7 +35,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         {
         }
 
-        private double strainDecay(double ms) => Math.Pow(strainDecayBase, ms / 1000);
+        private double strainDecay(double ms) => DiffUtils.Pow(strain_decay_base, ms / 1000);
 
         protected override double ObjectDifficultyOf(DifficultyHitObject current)
         {
@@ -46,7 +45,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             double decay = strainDecay(((OsuDifficultyHitObject)current).AdjustedDeltaTime);
 
             currentStrain *= decay;
-            currentStrain += calculateModAdjustedDifficulty(current) * (1 - decay) * skillMultiplier;
+            currentStrain += calculateAdjustedDifficulty(current) * (1 - decay) * skill_multiplier;
 
             double currentRhythm = RhythmEvaluator.EvaluateDifficultyOf(current);
 
@@ -58,7 +57,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return totalStrain;
         }
 
-        private double calculateModAdjustedDifficulty(DifficultyHitObject current)
+        private double calculateAdjustedDifficulty(DifficultyHitObject current)
         {
             double difficulty = SpeedEvaluator.EvaluateDifficultyOf(current);
 
@@ -68,7 +67,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return difficulty;
         }
 
-        public double RelevantNoteCount()
+        public double RelevantObjectCount()
         {
             if (ObjectDifficulties.Count == 0)
                 return 0;
@@ -86,16 +85,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (sliderStrains.Count == 0)
                 return 0;
 
-            if (NoteWeightSum == 0)
+            if (ObjectWeightSum == 0)
                 return 0.0;
 
-            double consistentTopNote = difficultyValue / NoteWeightSum; // What would the top note be if all note values were identical
+            double consistentTopObject = difficultyValue / ObjectWeightSum; // What would the top note be if all note values were identical
 
-            if (consistentTopNote == 0)
+            if (consistentTopObject == 0)
                 return 0;
 
             // Use a weighted sum of all notes. Constants are arbitrary and give nice values
-            return sliderStrains.Sum(s => DifficultyCalculationUtils.Logistic(s / consistentTopNote, 0.88, 10, 1.1));
+            return sliderStrains.Sum(s => DiffUtils.Logistic(s / consistentTopObject, 0.88, 10, 1.1));
         }
     }
 }
