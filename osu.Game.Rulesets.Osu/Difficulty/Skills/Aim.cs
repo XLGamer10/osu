@@ -28,9 +28,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             IncludeSliders = includeSliders;
         }
 
-        protected override double DecayWeight => 0.91;
-        protected override double MaxStoredSections => 10000;
-
         private double currentStrain;
 
         private const double skill_multiplier_snap = 72.7;
@@ -189,8 +186,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 double startTime = time;
                 double endTime = time + strain.SectionLength / MaxSectionLength;
 
-                double weight = (DiffUtils.Pow(DecayWeight, startTime) - DiffUtils.Pow(DecayWeight, endTime)) / DiffUtils.Log(1 / DecayWeight)
-                                + lengthBonus * (DiffUtils.Log(1 / (startTime + 50)) - DiffUtils.Log(1 / (endTime + 50)));
+                double weight = (DiffUtils.Pow(DecayWeight, startTime) - DiffUtils.Pow(DecayWeight, endTime)) / Math.Log(1 / DecayWeight)
+                                + length_bonus * (Math.Log(1 / (startTime + 50)) - Math.Log(1 / (endTime + 50)));
 
                 strainWeightSum += weight;
 
@@ -228,7 +225,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 return ObjectDifficulties.Count;
 
             // Use a weighted sum of all strains. Constants are arbitrary and give nice values
-            return ObjectDifficulties.Sum(s => DifficultyCalculationUtils.Logistic(s / consistentTopStrain, 0.88, 10, 1.1));
+            return ObjectDifficulties.Sum(s => DiffUtils.Logistic(s / consistentTopStrain, 0.88, 10, 1.1));
         }
     }
 }

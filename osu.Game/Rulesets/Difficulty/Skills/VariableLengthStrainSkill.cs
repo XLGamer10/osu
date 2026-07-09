@@ -58,13 +58,13 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         /// <param name="mods">The mods.</param>
         /// <param name="decayWeight">The weight by which each strain value decays.</param>
         /// <param name="maxSectionLength">The maximum length of each strain section.</param>
-        protected VariableLengthStrainSkill(Mod[] mods, double decayWeight = 0.9, int maxSectionLength = 400)
+        protected VariableLengthStrainSkill(Mod[] mods, double decayWeight = 0.91, int maxSectionLength = 400)
             : base(mods)
         {
             DecayWeight = decayWeight;
             MaxSectionLength = maxSectionLength;
 
-            maxStoredLength = 11 / (1 - DecayWeight);
+            maxStoredLength = 10000;
         }
 
         /// <summary>
