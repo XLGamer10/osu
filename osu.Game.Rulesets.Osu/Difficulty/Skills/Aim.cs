@@ -32,8 +32,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             WithCheesability = withCheesability;
         }
 
-        private double inaccuraciesWhileCheesing = 0;
-        private double maxStrain = 0;
+        private double inaccuraciesWhileCheesing;
+        private double maxStrain;
         private double currentStrain;
 
         private double skillMultiplierSnap => 70.9;
@@ -94,7 +94,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 totalDifficulty *= 1.0 - magnetisedStrength;
             }
 
-            totalDifficulty *= 0.985 + Math.Pow(Math.Max(0, ((OsuDifficultyHitObject)current).OverallDifficulty), 2) / 4000;
+            totalDifficulty *= 1 + 119 / 4050.0;
 
             return totalDifficulty;
         }

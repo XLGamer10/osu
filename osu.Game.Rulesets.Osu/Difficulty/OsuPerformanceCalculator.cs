@@ -528,7 +528,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 // We can be 99% confident that p is at least this value.
                 double pLowerBound = (n * p + z * z / 2) / (n + z * z) - z / (n + z * z) * Math.Sqrt(n * p * (1 - p) + z * z / 4);
 
-
                 // Compute the deviation assuming 300s and 100s are normally distributed, and 50s are uniformly distributed.
                 // Begin with 300s and 100s first. Ignoring 50s, we can be 99% confident that the deviation is not higher than:
                 double deviation = greatHitWindow / (Math.Sqrt(2) * DifficultyCalculationUtils.ErfInv(pLowerBound));
