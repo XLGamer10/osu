@@ -85,8 +85,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 totalDifficulty *= 1.0 - magnetisedStrength;
             }
 
-            totalDifficulty *= 0.985 + Math.Pow(Math.Max(0, ((OsuDifficultyHitObject)current).OverallDifficulty), 2) / 4000;
-
             return totalDifficulty;
         }
 
