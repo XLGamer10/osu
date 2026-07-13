@@ -293,9 +293,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             accuracyValue = Math.Max(0, accuracyValue);
             accuracyValue = Math.Pow(accuracyValue, 0.5) * 0.54 * highAccuracyBuff * Math.Pow(accuracyHitObjectsWithAccuracy, 1.5);
 
-            if (amountHitObjectsWithAccuracy > 2000)
-                accuracyValue *= Math.Pow(2000.0 / amountHitObjectsWithAccuracy, 0.075);
-
             // Increasing the accuracy value by object count for Blinds isn't ideal, so the minimum buff is given.
             if (score.Mods.Any(m => m is OsuModBlinds))
                 accuracyValue *= 1.14;
@@ -545,7 +542,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             const double z = 2.32634787404;
             double mu = alpha * Math.Pow(1 - 1 / (9 * alpha) + z * Math.Sqrt(1 / (9 * alpha)), 3);
 
-            double k = objectDifficulty / Math.Log(1 + mu / Math.Pow(objects, 1.075));
+            double k = objectDifficulty / Math.Log(1 + mu / Math.Pow(objects, 1.085));
 
             return k * lerp;
         }
